@@ -55,6 +55,7 @@ const pathsCanvas = document.getElementById("pathsCanvas");
 const ctx = pathsCanvas.getContext("2d");
 
 let allPaths = [];
+let allBuildSpots = [];
 let activePath = null;
 
 function randomBetween(a, b) {
@@ -85,6 +86,50 @@ function generateRandomPath(start, end, minSegments = 5, maxSegments = 8) {
   return waypoints;
 }
 
+function generateBuildSpotsForPath(path) {
+  const spots = [];
+  const numSpots = 6 + Math.floor(Math.random() * 4); // 6 a 9 pontos por caminho
+  // Chance de cluster
+  if (Math.random() < 0.5) {
+    // Criar cluster
+    const clusterIdx = 1 + Math.floor(Math.random() * (path.length - 3));
+    const clusterCount = 3 + Math.floor(Math.random() * 2); // 3 ou 4
+    for (let i = 0; i < clusterCount; i++) {
+      const base = path[clusterIdx];
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 30 + Math.random() * 20;
+      spots.push({
+        x: base.x + Math.cos(angle) * dist,
+        y: base.y + Math.sin(angle) * dist
+      });
+    }
+    // Restante dos pontos distribuídos
+    for (let i = clusterCount; i < numSpots; i++) {
+      const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
+      const base = path[segIdx];
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 30 + Math.random() * 30;
+      spots.push({
+        x: base.x + Math.cos(angle) * dist,
+        y: base.y + Math.sin(angle) * dist
+      });
+    }
+  } else {
+    // Todos distribuídos aleatoriamente
+    for (let i = 0; i < numSpots; i++) {
+      const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
+      const base = path[segIdx];
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 30 + Math.random() * 30;
+      spots.push({
+        x: base.x + Math.cos(angle) * dist,
+        y: base.y + Math.sin(angle) * dist
+      });
+    }
+  }
+  return spots;
+}
+
 function drawPaths() {
   ctx.clearRect(0, 0, pathsCanvas.width, pathsCanvas.height);
   ctx.lineWidth = 18;
@@ -97,6 +142,36 @@ function drawPaths() {
       ctx.lineTo(path[i].x, path[i].y);
     }
     ctx.stroke();
+  }
+  // Desenhar pontos de construção
+  ctx.fillStyle = "#fff";
+  for (const spots of allBuildSpots) {
+    for (const spot of spots) {
+      ctx.beginPath();
+      ctx.arc(spot.x, spot.y, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#bbb";
+      ctx.stroke();
+    }
+  }
+}
+
+function addBuildSpotsToExistingPaths() {
+  for (let i = 0; i < allPaths.length - 1; i++) { // exceto o novo
+    const path = allPaths[i];
+    const spots = allBuildSpots[i];
+    const addCount = 1 + Math.floor(Math.random() * 3); // 1 a 3
+    for (let j = 0; j < addCount; j++) {
+      const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
+      const base = path[segIdx];
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 30 + Math.random() * 30;
+      spots.push({
+        x: base.x + Math.cos(angle) * dist,
+        y: base.y + Math.sin(angle) * dist
+      });
+    }
   }
 }
 
@@ -114,6 +189,7 @@ function createNewPathOrBranch() {
     const path = generateRandomPath(start, center);
     allPaths.push(path);
     activePath = path;
+    allBuildSpots.push(generateBuildSpotsForPath(path));
   } else {
     // Ramifica de um ponto aleatório de um caminho existente
     const basePath = allPaths[Math.floor(Math.random()*allPaths.length)];
@@ -122,7 +198,9 @@ function createNewPathOrBranch() {
     const path = generateRandomPath(start, {x: centerX, y: centerY});
     allPaths.push(path);
     activePath = path;
+    allBuildSpots.push(generateBuildSpotsForPath(path));
   }
+  addBuildSpotsToExistingPaths();
   drawPaths();
 }
 
@@ -415,6 +493,9 @@ function resetRaid() {
   castleHp = castleMaxHp;
   updateCastleHp();
   // Reset torres (se necessário)
+  allPaths = [];
+  allBuildSpots = [];
+  activePath = null;
 }
 
 // Iniciar o jogo quando a página carregar
