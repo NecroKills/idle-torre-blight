@@ -277,6 +277,12 @@ function moveAlongPath(enemy) {
   enemy.element.style.top = enemy.y + "px";
   enemy.hpBar.style.width = (enemy.hp / enemy.maxHp) * 20 + "px";
   enemy.hpBar.style.background = enemy.hp / enemy.maxHp < 0.5 ? "yellow" : "green";
+
+  // Update boss HP percentage text
+  if (enemy.isBoss) {
+    const hpPerc = Math.round((enemy.hp / enemy.maxHp) * 100);
+    enemy.element.textContent = `${Math.max(0, hpPerc)}%`;
+  }
 }
 
 // Quando inimigo chega no castelo, tira vida do castelo e remove inimigo
@@ -315,7 +321,7 @@ function spawnEnemy(type = "normal") {
     enemyEl.style.height = "40px";
     enemyEl.style.zIndex = 10;
     enemyEl.style.border = "3px solid gold";
-    enemyEl.textContent = "BOSS";
+    enemyEl.textContent = "100%";
     enemyEl.style.color = "#fff";
     enemyEl.style.fontWeight = "bold";
     enemyEl.style.fontSize = "14px";
