@@ -172,6 +172,40 @@ body {
   z-index: 2;
 }
 
+.tower .tower-tooltip {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.tower:hover .tower-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+@keyframes shake-error {
+  0%, 100% { transform: translate(-50%, -50%); }
+  10%, 30%, 50%, 70%, 90% { transform: translate(calc(-50% - 4px), -50%); }
+  20%, 40%, 60%, 80% { transform: translate(calc(-50% + 4px), -50%); }
+}
+
+.tower.shake-error {
+    animation: shake-error 0.4s ease-in-out;
+}
+
 .enemy {
   width: 20px;
   height: 20px;

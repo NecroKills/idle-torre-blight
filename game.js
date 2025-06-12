@@ -474,11 +474,20 @@ function buildTowerAtSpot(type) {
   el.appendChild(rangeCircle);
   tower.rangeCircle = rangeCircle;
   
-  // Adicionar interaction (click para upgrade)
+  // Adicionar tooltip para custo de upgrade
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tower-tooltip';
+  el.appendChild(tooltip);
+  tower.tooltip = tooltip;
+  
+  // Adicionar interaction (click para upgrade, hover para info)
   el.style.cursor = 'pointer';
   el.onclick = (e) => {
     e.stopPropagation();
     upgradeTowerAtSpot(tower);
+  };
+  el.onmouseenter = () => {
+    updateTowerTooltip(tower);
   };
   
   builtTowers.push(tower);
@@ -530,21 +539,31 @@ function upgradeTowerAtSpot(tower) {
     return;
   }
   
-  const nextLevel = tower.level + 1;
-  const cost = towerUpgradeCosts[tower.level - 1]; // -1 porque o array é 0-indexed
+  const cost = towerUpgradeCosts[tower.level]; 
   
-  if (!hasEnoughGold(cost)) {
-    alert(`Ouro insuficiente! Precisa de ${cost} ouro.`);
+  if (gold < cost) {
+    tower.element.classList.add('shake-error');
+    setTimeout(() => {
+        tower.element.classList.remove('shake-error');
+    }, 400);
     return;
   }
   
+  // Deduz ouro somente se houver o suficiente
+  gold -= cost;
+  goldDisplay.textContent = gold;
+  localStorage.setItem("gold", gold);
+  
   // Aplica upgrade
-  tower.level = nextLevel;
-  tower.levelText.textContent = nextLevel;
+  tower.level++;
+  tower.levelText.textContent = tower.level;
   
   // Atualiza alcance e visual
   tower.rangeCircle.style.width = getTowerRange(tower) * 2 + 'px';
   tower.rangeCircle.style.height = getTowerRange(tower) * 2 + 'px';
+  
+  // Atualiza tooltip para o próximo nível
+  updateTowerTooltip(tower);
   
   // Efeito visual de upgrade
   const effect = document.createElement('div');
@@ -565,6 +584,20 @@ function upgradeTowerAtSpot(tower) {
   // Torre fica mais forte visualmente
   tower.element.style.border = `${Math.min(3, tower.level - 1)}px solid gold`;
   tower.element.style.boxShadow = `0 0 ${tower.level * 3}px ${tower.type === 'fast' ? 'yellow' : 'orange'}`;
+}
+
+function updateTowerTooltip(tower) {
+    if (tower.level >= 5) {
+        tower.tooltip.textContent = 'Nível Máximo';
+    } else {
+        const cost = towerUpgradeCosts[tower.level];
+        tower.tooltip.textContent = `Upgrade: ${cost}g`;
+        if (gold < cost) {
+            tower.tooltip.style.color = '#ff8a8a'; // Vermelho claro para indicar falta de ouro
+        } else {
+            tower.tooltip.style.color = '#fff'; // Cor padrão
+        }
+    }
 }
 
 // Função para disparar projéteis
