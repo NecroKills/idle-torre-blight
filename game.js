@@ -9,7 +9,7 @@ const nextRaidBtn = document.getElementById("nextRaidBtn");
 const diamondsDisplay = document.getElementById("diamonds");
 
 // Estado inicial
-let gold = parseInt(localStorage.getItem("gold")) || 0;
+let gold = 300; // Ouro inicial sempre 300
 let wave = 0; // Não usaremos mais o sistema de ondas
 let towerDamage = parseInt(localStorage.getItem("towerDamage")) || 10;
 let raidLevel = parseInt(localStorage.getItem("raidLevel")) || 1;
@@ -40,6 +40,10 @@ function updateCastleHp() {
   if (castleHp <= 0 && !raidEnded) {
     raidEnded = true;
     showNextRaidBtn();
+    // Resetar ouro para 300
+    gold = 300;
+    localStorage.setItem("gold", gold);
+    goldDisplay.textContent = gold;
     alert("Game Over! O castelo foi destruído!");
     location.reload();
   }
@@ -356,11 +360,33 @@ function spawnEnemy(type = "normal") {
 // Array para armazenar torres construídas
 let builtTowers = [];
 
-// Modificar buildTowerAtSpot para registrar a torre
+// Custos de upgrade de torre por nível
+const towerUpgradeCosts = [50, 100, 150, 300, 500]; // Nível 0→1, 1→2, 2→3, 3→4, 4→5
+
+// Função para verificar se tem ouro suficiente
+function hasEnoughGold(amount) {
+  if (gold >= amount) {
+    gold -= amount;
+    goldDisplay.textContent = gold;
+    localStorage.setItem("gold", gold);
+    return true;
+  }
+  return false;
+}
+
+// Modificar buildTowerAtSpot para considerar custo e nível
 function buildTowerAtSpot(type) {
   if (radialMenuSpotPathIdx == null || radialMenuSpotIdx == null) return;
+  
+  // Verificar se tem ouro suficiente para nível 1
+  if (!hasEnoughGold(towerUpgradeCosts[0])) {
+    alert(`Ouro insuficiente! Precisa de ${towerUpgradeCosts[0]} ouro.`);
+    return;
+  }
+  
   const spot = allBuildSpots[radialMenuSpotPathIdx][radialMenuSpotIdx];
   spot.tower = type;
+  
   // Adicionar torre visual
   const el = document.createElement('div');
   el.className = 'tower';
@@ -369,15 +395,120 @@ function buildTowerAtSpot(type) {
   el.style.background = type === 'fast' ? 'yellow' : 'orange';
   el.title = type === 'fast' ? 'Torre Rápida' : 'Torre Lenta (Área)';
   gameArea.appendChild(el);
-  // Registrar torre para lógica de ataque
-  builtTowers.push({
+  
+  // Registrar torre para lógica de ataque (agora com nível)
+  const tower = {
     x: spot.x,
     y: spot.y,
     type: type,
-    cooldown: 0
-  });
+    cooldown: 0,
+    level: 1,
+    element: el,
+    spotPathIdx: radialMenuSpotPathIdx,
+    spotIdx: radialMenuSpotIdx
+  };
+  
+  // Adicionar texto de nível
+  const levelText = document.createElement('div');
+  levelText.className = 'tower-level';
+  levelText.textContent = '1';
+  levelText.style.position = 'absolute';
+  levelText.style.top = '50%';
+  levelText.style.left = '50%';
+  levelText.style.transform = 'translate(-50%, -50%)';
+  levelText.style.color = 'black';
+  levelText.style.fontWeight = 'bold';
+  levelText.style.fontSize = '10px';
+  levelText.style.pointerEvents = 'none';
+  el.appendChild(levelText);
+  tower.levelText = levelText;
+  
+  // Adicionar visualização de alcance
+  const rangeCircle = document.createElement('div');
+  rangeCircle.className = 'tower-range';
+  rangeCircle.style.position = 'absolute';
+  rangeCircle.style.top = '50%';
+  rangeCircle.style.left = '50%';
+  rangeCircle.style.transform = 'translate(-50%, -50%)';
+  rangeCircle.style.width = getTowerRange(tower) * 2 + 'px';
+  rangeCircle.style.height = getTowerRange(tower) * 2 + 'px';
+  rangeCircle.style.border = '1px solid ' + (type === 'fast' ? 'yellow' : 'orange');
+  rangeCircle.style.borderRadius = '50%';
+  rangeCircle.style.opacity = '0.2';
+  rangeCircle.style.pointerEvents = 'none';
+  el.appendChild(rangeCircle);
+  tower.rangeCircle = rangeCircle;
+  
+  // Adicionar interaction (click para upgrade)
+  el.style.cursor = 'pointer';
+  el.onclick = (e) => {
+    e.stopPropagation();
+    upgradeTowerAtSpot(tower);
+  };
+  
+  builtTowers.push(tower);
   // Redesenhar pontos (remover ponto branco)
   drawPaths();
+}
+
+// Função para calcular dano e alcance baseado no nível
+function getTowerDamage(tower) {
+  const baseDamage = tower.type === 'fast' ? towerDamage : Math.floor(towerDamage * 0.7);
+  return baseDamage * (1 + (tower.level - 1) * 0.5); // +50% por nível
+}
+
+function getTowerRange(tower) {
+  const baseRange = tower.type === 'fast' ? 120 : 100;
+  return baseRange * (1 + (tower.level - 1) * 0.1); // +10% por nível
+}
+
+function getTowerCooldown(tower) {
+  const baseCooldown = tower.type === 'fast' ? 18 : 60;
+  return baseCooldown * (1 - (tower.level - 1) * 0.1); // -10% por nível (mais rápido)
+}
+
+// Função para upgrade de torre
+function upgradeTowerAtSpot(tower) {
+  if (tower.level >= 5) {
+    // Silenciosamente não faz nada, torre já está no máximo
+    return;
+  }
+  
+  const nextLevel = tower.level + 1;
+  const cost = towerUpgradeCosts[tower.level - 1]; // -1 porque o array é 0-indexed
+  
+  if (!hasEnoughGold(cost)) {
+    alert(`Ouro insuficiente! Precisa de ${cost} ouro.`);
+    return;
+  }
+  
+  // Aplica upgrade
+  tower.level = nextLevel;
+  tower.levelText.textContent = nextLevel;
+  
+  // Atualiza alcance e visual
+  tower.rangeCircle.style.width = getTowerRange(tower) * 2 + 'px';
+  tower.rangeCircle.style.height = getTowerRange(tower) * 2 + 'px';
+  
+  // Efeito visual de upgrade
+  const effect = document.createElement('div');
+  effect.className = 'upgrade-effect';
+  effect.style.position = 'absolute';
+  effect.style.width = '40px';
+  effect.style.height = '40px';
+  effect.style.background = 'rgba(255,255,255,0.5)';
+  effect.style.borderRadius = '50%';
+  effect.style.transform = 'translate(-50%, -50%)';
+  effect.style.left = tower.x + 'px';
+  effect.style.top = tower.y + 'px';
+  effect.style.pointerEvents = 'none';
+  effect.style.animation = 'towerUpgrade 0.5s forwards';
+  gameArea.appendChild(effect);
+  setTimeout(() => effect.remove(), 500);
+  
+  // Torre fica mais forte visualmente
+  tower.element.style.border = `${Math.min(3, tower.level - 1)}px solid gold`;
+  tower.element.style.boxShadow = `0 0 ${tower.level * 3}px ${tower.type === 'fast' ? 'yellow' : 'orange'}`;
 }
 
 // Função para disparar projéteis
@@ -407,61 +538,68 @@ function shootProjectileTower(tower, target, damage, color = 'yellow') {
   }, 20);
 }
 
-// Função para ataque das torres
+// Atualizar towersAttackLoop para usar os novos cálculos de dano/alcance/cooldown
 function towersAttackLoop() {
   for (const tower of builtTowers) {
     tower.cooldown = (tower.cooldown || 0) - 1;
     // Torre rápida: atira rápido em 1 alvo
     if (tower.type === 'fast') {
       if (tower.cooldown <= 0) {
-        // Procura inimigo mais próximo em alcance 120
+        // Procura inimigo mais próximo em alcance
+        const towerRange = getTowerRange(tower);
         let minDist = 9999;
         let target = null;
         for (const enemy of enemies) {
           const dx = tower.x - enemy.x;
           const dy = tower.y - enemy.y;
           const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < 120 && dist < minDist && enemy.hp > 0) {
+          if (dist < towerRange && dist < minDist && enemy.hp > 0) {
             minDist = dist;
             target = enemy;
           }
         }
         if (target) {
-          shootProjectileTower(tower, target, towerDamage, 'yellow');
-          tower.cooldown = 18; // rápido
+          shootProjectileTower(tower, target, getTowerDamage(tower), 'yellow');
+          tower.cooldown = getTowerCooldown(tower);
         }
       }
     } else if (tower.type === 'aoe') {
       // Torre de área: atira devagar, mas atinge todos próximos
       if (tower.cooldown <= 0) {
         let any = false;
+        const towerRange = getTowerRange(tower);
         for (const enemy of enemies) {
           const dx = tower.x - enemy.x;
           const dy = tower.y - enemy.y;
           const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < 100 && enemy.hp > 0) {
-            shootProjectileTower(tower, enemy, Math.floor(towerDamage*0.7), 'orange');
+          if (dist < towerRange && enemy.hp > 0) {
+            shootProjectileTower(tower, enemy, getTowerDamage(tower), 'orange');
             any = true;
           }
         }
-        if (any) tower.cooldown = 60; // devagar
+        if (any) tower.cooldown = getTowerCooldown(tower);
       }
     }
   }
 }
+
 // Loop de ataque das torres
 setInterval(towersAttackLoop, 30);
 
+// Atualize a função upgradeTower (botão global)
 function upgradeTower() {
-  if (gold >= 50) {
-    gold -= 50;
-    towerDamage += 5;
-    goldDisplay.textContent = gold;
-    damageDisplay.textContent = towerDamage;
-    localStorage.setItem("gold", gold);
-    localStorage.setItem("towerDamage", towerDamage);
-  }
+  alert("Clique diretamente nas torres para fazer upgrade!\n\nCustos de upgrade:\nNível 1: 50 ouro\nNível 2: 100 ouro\nNível 3: 150 ouro\nNível 4: 300 ouro\nNível 5: 500 ouro");
 }
+
+// Adicionar estilo de animação para upgrade
+const styleEl = document.createElement('style');
+styleEl.textContent = `
+@keyframes towerUpgrade {
+  0% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.5); }
+}
+`;
+document.head.appendChild(styleEl);
 
 // Início da RAID
 function startRaid() {
@@ -548,8 +686,8 @@ function nextRaid() {
   raidLevel++;
   localStorage.setItem("raidLevel", raidLevel);
   raidLevelDisplay.textContent = raidLevel;
-  // Resetar ouro
-  gold = 0;
+  // Resetar ouro sempre para 300
+  gold = 300;
   localStorage.setItem("gold", gold);
   goldDisplay.textContent = gold;
   // Resetar dano das torres
