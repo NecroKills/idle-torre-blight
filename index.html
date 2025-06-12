@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<title>Idle Tower Defense - Caminho com Curvas</title>
+<title>Idle Tower Defense - Castelo Central com 4 Caminhos</title>
 <style>
   body {
     font-family: sans-serif;
@@ -13,7 +13,7 @@
   #game {
     margin: 20px auto;
     width: 600px;
-    height: 150px;
+    height: 300px;
     background: #333;
     position: relative;
     overflow: hidden;
@@ -27,6 +27,7 @@
     position: absolute;
     border-radius: 50%;
     transform: translate(-50%, -50%);
+    z-index: 2;
   }
   .enemy {
     width: 20px;
@@ -52,30 +53,62 @@
     position: absolute;
     transform: translate(-50%, -50%);
   }
-  #pathCanvas {
+  #castle {
+    width: 60px;
+    height: 60px;
+    background: darkred;
+    border: 3px solid #800000;
+    border-radius: 10px;
     position: absolute;
-    top: 0;
-    left: 0;
-    pointer-events: none;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
   }
+  #castleHpBar {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 10px;
+    background: #444;
+    border-radius: 5px;
+    overflow: hidden;
+    z-index: 4;
+  }
+  #castleHpBar > div {
+    height: 100%;
+    background: lime;
+    width: 100%;
+    transition: width 0.3s;
+  }
+  
 </style>
 </head>
 <body>
-  <h1>Idle Tower Defense - Caminho com Curvas</h1>
+  <h1>Idle Tower Defense - Castelo Central com 4 Caminhos</h1>
   <div>Ouro: <span id="gold">0</span></div>
   <div>Onda: <span id="wave">0</span></div>
   <div>Dano da Torre: <span id="damage">10</span></div>
+  <div>Vida do Castelo: <span id="castleHpText">100</span></div>
   <button onclick="upgradeTower()">Upgrade Torre (50 ouro)</button>
 
-  <div id="game"></div>
+  <div id="game">
+    <div id="castle">
+      <div id="castleHpBar"><div></div></div>
+    </div>
+  </div>
 
   <script>
     const gameArea = document.getElementById("game");
     const goldDisplay = document.getElementById("gold");
     const waveDisplay = document.getElementById("wave");
     const damageDisplay = document.getElementById("damage");
+    const castleHpText = document.getElementById("castleHpText");
+    const castleHpBarInner = document.querySelector("#castleHpBar > div");
 
-    // Configurações iniciais
+    // Estado inicial
     let gold = parseInt(localStorage.getItem("gold")) || 0;
     let wave = parseInt(localStorage.getItem("wave")) || 0;
     let towerDamage = parseInt(localStorage.getItem("towerDamage")) || 10;
@@ -84,51 +117,57 @@
     waveDisplay.textContent = wave;
     damageDisplay.textContent = towerDamage;
 
-    // Torre - posição fixa e alcance
-    const towers = [
-      { x: 150, y: 100, range: 120 },
-      { x: 300, y: 70, range: 100 },
-      { x: 450, y: 100, range: 120 }
-    ];
+    // Castelo
+    let castleMaxHp = 100 + Math.floor(wave / 10) * 20;
+    let castleHp = castleMaxHp;
 
-    // Definindo o caminho com pontos (waypoints)
-    const pathPoints = [
-      { x: 0, y: 130 },
-      { x: 100, y: 130 },
-      { x: 150, y: 80 },
-      { x: 250, y: 80 },
-      { x: 300, y: 120 },
-      { x: 400, y: 120 },
-      { x: 500, y: 60 },
-      { x: 600, y: 60 }
-    ];
-
-    // Desenha o caminho no fundo usando canvas
-    const canvas = document.createElement("canvas");
-    canvas.id = "pathCanvas";
-    canvas.width = 600;
-    canvas.height = 150;
-    gameArea.appendChild(canvas);
-    const ctx = canvas.getContext("2d");
-
-    function drawPath() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = "#aaa";
-      ctx.lineWidth = 6;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-
-      ctx.beginPath();
-      ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
-      for(let i=1; i<pathPoints.length; i++) {
-        ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+    function updateCastleHp() {
+      castleHpText.textContent = castleHp;
+      const perc = Math.max(0, (castleHp / castleMaxHp) * 100);
+      castleHpBarInner.style.width = perc + "%";
+      if (castleHp <= 0) {
+        alert("Game Over! O castelo foi destruído!");
+        location.reload();
       }
-      ctx.stroke();
     }
+    updateCastleHp();
 
-    drawPath();
+    // Definindo 4 caminhos diferentes com waypoints até o castelo (no centro 300,150)
+    const centerX = 300;
+    const centerY = 150;
 
-    // Spawn torres
+  const paths = {
+    norte: [
+      { x: 300, y: -20 },
+      { x: 300, y: 75 },
+      { x: centerX, y: centerY }
+    ],
+    sul: [
+      { x: 300, y: 320 },
+      { x: 300, y: 225 },
+      { x: centerX, y: centerY }
+    ],
+    leste: [
+      { x: 620, y: 150 },
+      { x: 450, y: 150 },
+      { x: centerX, y: centerY }
+    ],
+    oeste: [
+      { x: -20, y: 150 },
+      { x: 150, y: 150 },
+      { x: centerX, y: centerY }
+    ]
+  };
+
+    // Spawn torres perto do castelo protegendo cada caminho
+    const towers = [
+      { x: 300, y: 70, range: 120, path: "norte" },  // movida mais para cima
+      { x: 300, y: 230, range: 120, path: "sul" },   // movida mais para baixo
+      { x: 470, y: 150, range: 120, path: "leste" },  // torre leste
+      { x: 130, y: 150, range: 120, path: "oeste" }   // torre oeste
+    ];
+
+    // Criar elemento torre visual
     function spawnTower(tower) {
       const el = document.createElement("div");
       el.className = "tower";
@@ -138,26 +177,29 @@
     }
     towers.forEach(spawnTower);
 
-    // Função para mover inimigos entre pontos
+    // Lista de inimigos vivos
+    const enemies = [];
+
+    // Função para mover inimigos entre waypoints do seu caminho
     function moveAlongPath(enemy) {
+      const path = paths[enemy.path];
       if (enemy.currentTargetIndex === undefined) enemy.currentTargetIndex = 1;
-      const target = pathPoints[enemy.currentTargetIndex];
+      const target = path[enemy.currentTargetIndex];
       const dx = target.x - enemy.x;
       const dy = target.y - enemy.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist < enemy.speed) {
-        // Chegou no ponto, vai para próximo
+        // Chegou no ponto, avança
         enemy.x = target.x;
         enemy.y = target.y;
         enemy.currentTargetIndex++;
-        if (enemy.currentTargetIndex >= pathPoints.length) {
-          // Saiu do mapa, inimigo passou
-          enemyReachedEnd(enemy);
+        if (enemy.currentTargetIndex >= path.length) {
+          // Chegou no castelo!
+          enemyReachedCastle(enemy);
           return;
         }
       } else {
-        // Move na direção do ponto
         enemy.x += (dx / dist) * enemy.speed;
         enemy.y += (dy / dist) * enemy.speed;
       }
@@ -169,15 +211,23 @@
       enemy.hpBar.style.background = enemy.hp / enemy.maxHp < 0.5 ? "yellow" : "green";
     }
 
-    // Quando inimigo chega no fim do caminho
-    function enemyReachedEnd(enemy) {
+    // Quando inimigo chega no castelo, tira vida do castelo e remove inimigo
+    function enemyReachedCastle(enemy) {
+      castleHp -= 10;
+      if (castleHp < 0) castleHp = 0;
+      updateCastleHp();
       clearInterval(enemy.moveInterval);
       enemy.element.remove();
-      // Poderia diminuir vida do jogador, por enquanto só remove
+      const index = enemies.indexOf(enemy);
+      if(index > -1) enemies.splice(index,1);
     }
 
     // Função para spawnar inimigos
     function spawnEnemy(type = "normal") {
+      // Escolhe aleatoriamente o caminho
+      const pathsKeys = Object.keys(paths);
+      const chosenPath = pathsKeys[Math.floor(Math.random() * pathsKeys.length)];
+
       const enemyEl = document.createElement("div");
       enemyEl.className = "enemy";
 
@@ -188,24 +238,25 @@
       let speed, maxHp;
       switch(type) {
         case "fast":
-          speed = 2.5;
-          maxHp = 20;
+          speed = 4;
+          maxHp = 100;
           enemyEl.style.background = "orange";
           break;
         case "tank":
-          speed = 0.8;
-          maxHp = 100;
+          speed = 1;
+          maxHp = 500;
           enemyEl.style.background = "blue";
           break;
         default:
-          speed = 1.5;
-          maxHp = 40;
+          speed = 2;
+          maxHp = 150;
       }
 
       const enemy = {
         element: enemyEl,
-        x: pathPoints[0].x,
-        y: pathPoints[0].y,
+        path: chosenPath,
+        x: paths[chosenPath][0].x,
+        y: paths[chosenPath][0].y,
         speed,
         hp: maxHp,
         maxHp,
@@ -228,14 +279,15 @@
           gold += 10;
           goldDisplay.textContent = gold;
           localStorage.setItem("gold", gold);
+
+          // Remove da lista enemies
+          const index = enemies.indexOf(enemy);
+          if(index > -1) enemies.splice(index,1);
         }
       }, 30);
 
       enemies.push(enemy);
     }
-
-    // Lista de inimigos vivos
-    const enemies = [];
 
     // Função para disparar projéteis
     function shootProjectile(x, y, target, damage) {
@@ -252,73 +304,74 @@
         const dx = target.x - px;
         const dy = target.y - py;
         const dist = Math.sqrt(dx*dx + dy*dy);
-        const speed = 6;
-        if(dist < speed) {
-          clearInterval(projInterval);
-          proj.remove();
-          target.hp -= damage;
-        } else {
-          px += (dx / dist) * speed;
-          py += (dy / dist) * speed;
-          proj.style.left = px + "px";
-          proj.style.top = py + "px";
-        }
-      }, 20);
+    if(dist < 4) {
+      target.hp -= damage;
+      clearInterval(projInterval);
+      proj.remove();
+      return;
+    }
+    px += (dx / dist) * 6;
+    py += (dy / dist) * 6;
+    proj.style.left = px + "px";
+    proj.style.top = py + "px";
+  }, 20);
+}
+
+// As torres atacam os inimigos dentro do alcance
+function towerAttack(enemy) {
+  towers.forEach(tower => {
+    const dx = tower.x - enemy.x;
+    const dy = tower.y - enemy.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < tower.range && !enemy.hitCooldown) {
+      enemy.hitCooldown = true;
+      shootProjectile(tower.x, tower.y, enemy, towerDamage);
+      setTimeout(() => enemy.hitCooldown = false, 1000);
+    }
+  });
+}
+
+function upgradeTower() {
+  if (gold >= 50) {
+    gold -= 50;
+    towerDamage += 5;
+    goldDisplay.textContent = gold;
+    damageDisplay.textContent = towerDamage;
+    localStorage.setItem("gold", gold);
+    localStorage.setItem("towerDamage", towerDamage);
+  }
+}
+
+// Início das ondas
+function startWave() {
+  wave++;
+  waveDisplay.textContent = wave;
+  localStorage.setItem("wave", wave);
+
+  if (wave % 10 === 0) {
+    castleMaxHp += 20;
+    castleHp += 20;
+    updateCastleHp();
+  }
+
+  let spawnCount = wave * 4;
+  let spawnInterval = setInterval(() => {
+    if(spawnCount <= 0) {
+      clearInterval(spawnInterval);
+      setTimeout(startWave, 5000);
+      return;
     }
 
-    // Função para torres atacarem inimigos
-    function towerAttack(enemy) {
-      towers.forEach(tower => {
-        const dx = enemy.x - tower.x;
-        const dy = enemy.y - tower.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
+    let r = Math.random();
+    if(r < 0.15) spawnEnemy("tank");
+    else if(r < 0.5) spawnEnemy("fast");
+    else spawnEnemy("normal");
 
-        if(dist <= tower.range && !enemy.hitCooldown) {
-          enemy.hitCooldown = true;
-          shootProjectile(tower.x, tower.y, enemy, towerDamage);
-          setTimeout(() => enemy.hitCooldown = false, 500);
-        }
-      });
-    }
+    spawnCount--;
+  }, 1000);
+}
 
-    function upgradeTower() {
-      if(gold >= 50) {
-        gold -= 50;
-        towerDamage += 5;
-        goldDisplay.textContent = gold;
-        damageDisplay.textContent = towerDamage;
-        localStorage.setItem("gold", gold);
-        localStorage.setItem("towerDamage", towerDamage);
-      }
-    }
-
-    // Função para iniciar ondas infinitas
-    function startWave() {
-      wave++;
-      waveDisplay.textContent = wave;
-      localStorage.setItem("wave", wave);
-
-      let spawnCount = wave * 3;
-      let spawnInterval = setInterval(() => {
-        if(spawnCount <= 0) {
-          clearInterval(spawnInterval); 
-          // Começar próxima onda após delay
-          setTimeout(startWave, 5000);
-          return;
-        }
-
-        // Escolher tipo aleatório
-        let r = Math.random();
-        if(r < 0.15) spawnEnemy("tank");
-        else if(r < 0.5) spawnEnemy("fast");
-        else spawnEnemy("normal");
-
-        spawnCount--;
-      }, 1000);
-    }
-
-    startWave();
-
-  </script>
+startWave();
+</script>
 </body>
 </html>
