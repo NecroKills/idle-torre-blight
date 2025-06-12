@@ -434,6 +434,7 @@ function startRaid() {
   raidEnded = false;
   waveDisplay.textContent = "0:00";
   allPaths = [];
+  allBuildSpots = [];
   activePath = null;
   createNewPathOrBranch(); // caminho inicial
   // Spawner de inimigos
@@ -461,15 +462,17 @@ function startRaid() {
     if (raidTime % 60 === 0) {
       createNewPathOrBranch();
     }
+    // Garantir boss aos 4 minutos
     if (raidTime === 240 && !bossSpawned) {
       bossSpawned = true;
-      spawnEnemy("boss");
+      setTimeout(() => spawnEnemy("boss"), 100); // delay para garantir visualização
     }
     if (raidTime >= RAID_DURATION) {
       raidEnded = true;
       clearInterval(raidInterval);
       setTimeout(() => {
         if (!bossSpawned) {
+          bossSpawned = true;
           spawnEnemy("boss");
         }
         showNextRaidBtn();
@@ -530,7 +533,14 @@ function resetRaid() {
   castleMaxHp = 100 + (raidLevel-1)*40;
   castleHp = castleMaxHp;
   updateCastleHp();
-  // Reset torres (se necessário)
+  // Limpa torres construídas
+  builtTowers.forEach(t => {
+    // Remove elementos visuais das torres
+    const els = document.querySelectorAll('.tower');
+    els.forEach(el => el.remove());
+  });
+  builtTowers = [];
+  // Limpa caminhos e pontos de construção
   allPaths = [];
   allBuildSpots = [];
   activePath = null;
