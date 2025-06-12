@@ -206,6 +206,16 @@ body {
     animation: shake-error 0.4s ease-in-out;
 }
 
+@keyframes shake-simple {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.radial-option.shake-error-simple {
+    animation: shake-simple 0.4s ease-in-out;
+}
+
 .enemy {
   width: 20px;
   height: 20px;

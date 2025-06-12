@@ -380,14 +380,25 @@ function hasEnoughGold(amount) {
 }
 
 // Modificar buildTowerAtSpot para considerar custo e nível
-function buildTowerAtSpot(type) {
-  if (radialMenuSpotPathIdx == null || radialMenuSpotIdx == null) return;
+function buildTowerAtSpot(type, clickedButton) {
+  if (radialMenuSpotPathIdx == null || radialMenuSpotIdx == null) return false;
   
+  const cost = towerUpgradeCosts[0];
   // Verificar se tem ouro suficiente para nível 1
-  if (!hasEnoughGold(towerUpgradeCosts[0])) {
-    alert(`Ouro insuficiente! Precisa de ${towerUpgradeCosts[0]} ouro.`);
-    return;
+  if (gold < cost) {
+    if(clickedButton) {
+        clickedButton.classList.add('shake-error-simple');
+        setTimeout(() => {
+            clickedButton.classList.remove('shake-error-simple');
+        }, 400);
+    }
+    return false; // Falha
   }
+  
+  // Deduz ouro
+  gold -= cost;
+  goldDisplay.textContent = gold;
+  localStorage.setItem("gold", gold);
   
   const spot = allBuildSpots[radialMenuSpotPathIdx][radialMenuSpotIdx];
   spot.tower = type;
@@ -493,6 +504,7 @@ function buildTowerAtSpot(type) {
   builtTowers.push(tower);
   // Redesenhar pontos (remover ponto branco)
   drawPaths();
+  return true; // Sucesso
 }
 
 // Função para calcular dano e alcance baseado no nível
@@ -1072,8 +1084,10 @@ function showRadialMenu(x, y, pathIdx, spotIdx) {
     btn.innerHTML = opt.icon;
     btn.onclick = (e) => {
       e.stopPropagation();
-      buildTowerAtSpot(opt.type);
-      hideRadialMenu();
+      const success = buildTowerAtSpot(opt.type, btn);
+      if (success) {
+        hideRadialMenu();
+      }
     };
     radialMenu.appendChild(btn);
   });
