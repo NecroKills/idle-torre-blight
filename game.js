@@ -96,45 +96,52 @@ function generateRandomPath(start, end, minSegments = 5, maxSegments = 8) {
   return waypoints;
 }
 
+function isPositionValid(x, y, allSpotArrays, minDistance) {
+    const minDistSq = minDistance * minDistance;
+    for (const spotArray of allSpotArrays) {
+        for (const spot of spotArray) {
+            const dx = x - spot.x;
+            const dy = y - spot.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < minDistSq) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 function generateBuildSpotsForPath(path) {
   const spots = [];
   const numSpots = 6 + Math.floor(Math.random() * 4); // 6 a 9 pontos por caminho
-  // Chance de cluster
-  if (Math.random() < 0.5) {
-    // Criar cluster
-    const clusterIdx = 1 + Math.floor(Math.random() * (path.length - 3));
-    const clusterCount = 3 + Math.floor(Math.random() * 2); // 3 ou 4
-    for (let i = 0; i < clusterCount; i++) {
-      const base = path[clusterIdx];
+  const minSpotDist = 25;
+
+  const inCluster = Math.random() < 0.5;
+  const clusterBase = inCluster ? path[1 + Math.floor(Math.random() * (path.length - 3))] : null;
+  const clusterCount = 3 + Math.floor(Math.random() * 2); // 3 ou 4
+
+  for (let i = 0; i < numSpots; i++) {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      let base, randomDist;
+      
+      if (inCluster && i < clusterCount) {
+        base = clusterBase;
+        randomDist = 20;
+      } else {
+        const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
+        base = path[segIdx];
+        randomDist = 30;
+      }
+
       const angle = Math.random() * Math.PI * 2;
-      const dist = 30 + Math.random() * 20;
-      spots.push({
-        x: base.x + Math.cos(angle) * dist,
-        y: base.y + Math.sin(angle) * dist
-      });
-    }
-    // Restante dos pontos distribuídos
-    for (let i = clusterCount; i < numSpots; i++) {
-      const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
-      const base = path[segIdx];
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 30 + Math.random() * 30;
-      spots.push({
-        x: base.x + Math.cos(angle) * dist,
-        y: base.y + Math.sin(angle) * dist
-      });
-    }
-  } else {
-    // Todos distribuídos aleatoriamente
-    for (let i = 0; i < numSpots; i++) {
-      const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
-      const base = path[segIdx];
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 30 + Math.random() * 30;
-      spots.push({
-        x: base.x + Math.cos(angle) * dist,
-        y: base.y + Math.sin(angle) * dist
-      });
+      const dist = 30 + Math.random() * randomDist;
+      const x = base.x + Math.cos(angle) * dist;
+      const y = base.y + Math.sin(angle) * dist;
+      
+      if (isPositionValid(x, y, [spots, ...allBuildSpots], minSpotDist)) {
+        spots.push({ x, y });
+        break; 
+      }
     }
   }
   return spots;
@@ -190,19 +197,25 @@ function drawPaths() {
 }
 
 function addBuildSpotsToExistingPaths() {
+  const minSpotDist = 25;
   for (let i = 0; i < allPaths.length - 1; i++) { // exceto o novo
     const path = allPaths[i];
     const spots = allBuildSpots[i];
     const addCount = 1 + Math.floor(Math.random() * 3); // 1 a 3
     for (let j = 0; j < addCount; j++) {
-      const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
-      const base = path[segIdx];
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 30 + Math.random() * 30;
-      spots.push({
-        x: base.x + Math.cos(angle) * dist,
-        y: base.y + Math.sin(angle) * dist
-      });
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
+        const base = path[segIdx];
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 30 + Math.random() * 30;
+        const x = base.x + Math.cos(angle) * dist;
+        const y = base.y + Math.sin(angle) * dist;
+        
+        if (isPositionValid(x, y, allBuildSpots, minSpotDist)) {
+            spots.push({ x, y });
+            break;
+        }
+      }
     }
   }
 }
