@@ -292,4 +292,23 @@ body {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
   }
+}
+
+.tower-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  font-size: 0.95em;
+}
+.tower-details-table th, .tower-details-table td {
+  padding: 6px;
+  border: 1px solid #555;
+  text-align: center;
+}
+.tower-details-table th {
+  background-color: #444;
+  color: #ffc107;
+}
+.tower-details-table tr:nth-child(even) {
+  background-color: #3a3a3a;
 } 
