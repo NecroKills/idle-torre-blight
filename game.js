@@ -743,16 +743,16 @@ function towersAttackLoop() {
       // Calcular alcance, considerando buff se aplicável
       const towerRange = getTowerRange(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
       
-      // Torre rápida: atira rápido em 1 alvo
+      // Torre rápida: atira rápido no inimigo com menos vida
       if (tower.type === 'fast') {
-        let minDist = 9999;
+        let minHp = Infinity;
         let target = null;
         for (const enemy of enemies) {
           const dx = tower.x - enemy.x;
           const dy = tower.y - enemy.y;
           const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < towerRange && dist < minDist && enemy.hp > 0) {
-            minDist = dist;
+          if (dist < towerRange && enemy.hp < minHp && enemy.hp > 0) {
+            minHp = enemy.hp;
             target = enemy;
           }
         }
