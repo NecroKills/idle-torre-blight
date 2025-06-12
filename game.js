@@ -58,6 +58,9 @@ let allPaths = [];
 let allBuildSpots = [];
 let activePath = null;
 
+// Portais (pontos de spawn dos inimigos)
+let portals = [];
+
 function randomBetween(a, b) {
   return a + Math.random() * (b - a);
 }
@@ -130,12 +133,32 @@ function generateBuildSpotsForPath(path) {
   return spots;
 }
 
+function createPortal(x, y) {
+  const portal = document.createElement('div');
+  portal.className = 'portal';
+  portal.style.left = x + 'px';
+  portal.style.top = y + 'px';
+  gameArea.appendChild(portal);
+  return portal;
+}
+
 function drawPaths() {
   ctx.clearRect(0, 0, pathsCanvas.width, pathsCanvas.height);
   ctx.lineWidth = 18;
   ctx.strokeStyle = "#8B5A2B";
   ctx.lineCap = "round";
+
+  // Remover portais antigos
+  portals.forEach(p => p.remove());
+  portals = [];
+  
   for (const path of allPaths) {
+    // Criar portal no início do caminho
+    const startX = path[0].x;
+    const startY = path[0].y;
+    const portal = createPortal(startX, startY);
+    portals.push(portal);
+    
     ctx.beginPath();
     ctx.moveTo(path[0].x, path[0].y);
     for (let i = 1; i < path.length; i++) {
@@ -143,6 +166,7 @@ function drawPaths() {
     }
     ctx.stroke();
   }
+  
   // Desenhar pontos de construção
   ctx.fillStyle = "#fff";
   for (const spots of allBuildSpots) {
@@ -253,7 +277,9 @@ function enemyReachedCastle(enemy) {
 function spawnEnemy(type = "normal") {
   if (!allPaths.length) return;
   // Escolhe aleatoriamente um dos caminhos ativos
-  const path = allPaths[Math.floor(Math.random() * allPaths.length)];
+  const pathIdx = Math.floor(Math.random() * allPaths.length);
+  const path = allPaths[pathIdx];
+  
   const enemyEl = document.createElement("div");
   enemyEl.className = "enemy";
   const hpBar = document.createElement("div");
@@ -282,6 +308,7 @@ function spawnEnemy(type = "normal") {
       default: speed = 1.5; maxHp = 40 + (raidLevel-1)*15;
     }
   }
+  
   const enemy = {
     element: enemyEl,
     path: path,
@@ -293,11 +320,21 @@ function spawnEnemy(type = "normal") {
     currentTargetIndex: 1,
     hpBar: hpBar,
     hitCooldown: false,
-    isBoss: type === "boss"
+    isBoss: type === "boss",
+    pathIdx
   };
+  
   enemyEl.style.left = enemy.x + "px";
   enemyEl.style.top = enemy.y + "px";
   gameArea.appendChild(enemyEl);
+  // Efeito de surgimento do portal
+  enemyEl.style.opacity = "0.6";
+  enemyEl.style.transform = "translate(-50%, -50%) scale(0.3)";
+  setTimeout(() => {
+    enemyEl.style.opacity = "1";
+    enemyEl.style.transform = "translate(-50%, -50%)";
+  }, 50);
+  
   enemy.moveInterval = setInterval(() => {
     moveAlongPath(enemy);
     if(enemy.hp <= 0) {

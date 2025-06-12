@@ -42,6 +42,7 @@ body {
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
+  animation: enemySpawn 0.5s ease-out;
 }
 
 .hpbar {
@@ -121,4 +122,36 @@ body {
 .radial-option:hover {
   background: #444;
   border-color: #fff;
+}
+
+.portal {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  background: 
+    radial-gradient(circle at center, black 0%, rgba(128, 0, 128, 0.8) 50%, rgba(255, 140, 0, 0.6) 80%, transparent 100%),
+    conic-gradient(from 0deg, black, purple, orange, black);
+  box-shadow: 0 0 15px rgba(128, 0, 128, 0.7);
+  transform-origin: center center;
+  animation: portalSpin 3s infinite linear;
+}
+
+@keyframes portalSpin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Animação para inimigos saindo do portal */
+@keyframes enemySpawn {
+  from {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0.5;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
 } 
