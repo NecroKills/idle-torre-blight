@@ -6,14 +6,16 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Idle Tower Defense</h1>
+  <div class="header">
+    <h1>Idle Tower Defense</h1>
+    <button id="helpBtn" onclick="showHelp()">❓</button>
+  </div>
   <div>Ouro: <span id="gold">0</span></div>
   <div>Diamantes: <span id="diamonds">0</span></div>
   <div>Onda: <span id="wave">0</span></div>
   <div>Dano da Torre: <span id="damage">10</span></div>
   <div>Vida do Castelo: <span id="castleHpText">100</span></div>
   <div>Nível da Raid: <span id="raidLevel">1</span></div>
-  <button onclick="upgradeTower()">Upgrade Torre (50 ouro)</button>
   <button id="nextRaidBtn" style="display:none;margin-left:10px;" onclick="nextRaid()">Próxima Raid</button>
 
   <div id="game" style="position:relative;">
@@ -22,6 +24,41 @@
       <div id="castleHpBar"><div></div></div>
     </div>
     <div id="radialMenu" style="display:none; position:absolute;"></div>
+  </div>
+
+  <div id="helpModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Ajuda do Jogo</h2>
+      <div class="help-section">
+        <h3>Torres Disponíveis</h3>
+        <div class="tower-info">
+          <div class="tower-icon fast">⚡</div>
+          <div class="tower-details">
+            <h4>Torre Rápida ⚡</h4>
+            <p>Atira rápido em um único alvo</p>
+            <p>Velocidade alta, dano moderado</p>
+          </div>
+        </div>
+        <div class="tower-info">
+          <div class="tower-icon aoe">🔥</div>
+          <div class="tower-details">
+            <h4>Torre de Área 🔥</h4>
+            <p>Atira devagar, mas atinge múltiplos inimigos</p>
+            <p>Velocidade baixa, dano em área</p>
+          </div>
+        </div>
+        <h3>Níveis de Torres</h3>
+        <table class="tower-levels">
+          <tr><th>Nível</th><th>Custo</th><th>Efeito</th></tr>
+          <tr><td>1</td><td>50 ouro</td><td>Base</td></tr>
+          <tr><td>2</td><td>100 ouro</td><td>+50% dano, +10% alcance, -10% recarga</td></tr>
+          <tr><td>3</td><td>150 ouro</td><td>+100% dano, +20% alcance, -20% recarga</td></tr>
+          <tr><td>4</td><td>300 ouro</td><td>+150% dano, +30% alcance, -30% recarga</td></tr>
+          <tr><td>5</td><td>500 ouro</td><td>+200% dano, +40% alcance, -40% recarga</td></tr>
+        </table>
+      </div>
+    </div>
   </div>
 
   <script src="game.js"></script>

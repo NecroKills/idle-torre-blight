@@ -583,13 +583,29 @@ function towersAttackLoop() {
   }
 }
 
+// Função para exibir modal de ajuda
+function showHelp() {
+  const modal = document.getElementById("helpModal");
+  modal.style.display = "block";
+  
+  // Adicionar listener para fechar no X
+  const closeBtn = modal.querySelector(".close");
+  closeBtn.onclick = function() {
+    modal.style.display = "none";
+  };
+  
+  // Fechar ao clicar fora do modal
+  window.onclick = function(event) {
+    if (event.target == modal) {
+      modal.style.display = "none";
+    }
+  };
+}
+
 // Loop de ataque das torres
 setInterval(towersAttackLoop, 30);
 
-// Atualize a função upgradeTower (botão global)
-function upgradeTower() {
-  alert("Clique diretamente nas torres para fazer upgrade!\n\nCustos de upgrade:\nNível 1: 50 ouro\nNível 2: 100 ouro\nNível 3: 150 ouro\nNível 4: 300 ouro\nNível 5: 500 ouro");
-}
+// Remover a antiga função upgradeTower, agora usamos showHelp
 
 // Adicionar estilo de animação para upgrade
 const styleEl = document.createElement('style');
