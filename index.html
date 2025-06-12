@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Idle Tower Defense</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #222;
+      color: white;
+      text-align: center;
+    }
+    #game {
+      margin: 20px auto;
+      width: 600px;
+      height: 120px;
+      background: #333;
+      position: relative;
+      overflow: hidden;
+      border-radius: 10px;
+      border: 2px solid #666;
+    }
+    .tower {
+      width: 20px;
+      height: 20px;
+      background: lime;
+      position: absolute;
+      top: 50px;
+      border-radius: 50%;
+    }
+    .enemy {
+      width: 20px;
+      height: 20px;
+      background: red;
+      position: absolute;
+      top: 50px;
+      border-radius: 50%;
+    }
+    .hpbar {
+      height: 4px;
+      background: green;
+      position: absolute;
+      top: -6px;
+      left: 0;
+    }
+    .projectile {
+      width: 6px;
+      height: 6px;
+      background: yellow;
+      border-radius: 50%;
+      position: absolute;
+    }
+  </style>
+</head>
+<body>
+  <h1>Idle Tower Defense</h1>
+  <div>Ouro: <span id="gold">0</span></div>
+  <div>Onda: <span id="wave">0</span></div>
+  <div>Dano da Torre: <span id="damage">10</span></div>
+  <button onclick="upgradeTower()">Upgrade Torre (50 ouro)</button>
+
+  <div id="game"></div>
+
+  <script>
+    const gameArea = document.getElementById("game");
+    const goldDisplay = document.getElementById("gold");
+    const waveDisplay = document.getElementById("wave");
+    const damageDisplay = document.getElementById("damage");
+
+// Carregar progresso salvo
+let gold = parseInt(localStorage.getItem("gold")) || 0;
+let wave = parseInt(localStorage.getItem("wave")) || 0;
+let towerDamage = parseInt(localStorage.getItem("towerDamage")) || 10;
+
+// Mostrar valores salvos
+goldDisplay.textContent = gold;
+waveDisplay.textContent = wave;
+damageDisplay.textContent = towerDamage;
+
+    const towers = [
+      { x: 150, y: 50, range: 100 },
+      { x: 300, y: 50, range: 100 },
+      { x: 450, y: 50, range: 100 }
+    ];
+
+    function upgradeTower() {
+        if (gold >= 50) {
+            gold -= 50;
+            towerDamage += 5;
+            goldDisplay.textContent = gold;
+            damageDisplay.textContent = towerDamage;
+
+            // Salvar progresso
+            localStorage.setItem("gold", gold);
+            localStorage.setItem("towerDamage", towerDamage);
+        }
+    }
+
+    function spawnTower(tower) {
+      const el = document.createElement("div");
+      el.className = "tower";
+      el.style.left = `${tower.x}px`;
+      el.style.top = `${tower.y}px`;
+      gameArea.appendChild(el);
+    }
+
+    towers.forEach(spawnTower);
+
+    function spawnEnemy(type = "normal") {
+      const enemy = document.createElement("div");
+      enemy.className = "enemy";
+
+      const hpBar = document.createElement("div");
+      hpBar.className = "hpbar";
+      enemy.appendChild(hpBar);
+
+      let speed, maxHp;
+      switch (type) {
+        case "fast":
+          speed = 2.5;
+          maxHp = 20;
+          enemy.style.background = "orange";
+          break;
+        case "tank":
+          speed = 0.8;
+          maxHp = 100;
+          enemy.style.background = "blue";
+          break;
+        default:
+          speed = 1.5;
+          maxHp = 40;
+      }
+
+      enemy.hp = maxHp;
+      enemy.maxHp = maxHp;
+      enemy.x = 0;
+      gameArea.appendChild(enemy);
+
+      const interval = setInterval(() => {
+        enemy.x += speed;
+        enemy.style.left = `${enemy.x}px`;
+
+        if (enemy.x > 600) {
+          clearInterval(interval);
+          enemy.remove();
+        }
+
+        // Atualiza barra de vida
+        hpBar.style.width = `${(enemy.hp / enemy.maxHp) * 20}px`;
+        hpBar.style.background = enemy.hp / enemy.maxHp < 0.5 ? "yellow" : "green";
+
+        // Verifica ataque de torres
+        towers.forEach(tower => {
+          const dist = Math.abs(enemy.x - tower.x);
+          if (dist <= tower.range && !enemy.hitRecently) {
+            shootProjectile(tower.x, tower.y, enemy, towerDamage);
+            enemy.hitRecently = true;
+            setTimeout(() => enemy.hitRecently = false, 500); // Fire rate
+          }
+        });
+
+        if (enemy.hp <= 0) {
+          clearInterval(interval);
+          enemy.remove();
+          gold += 10;
+          goldDisplay.textContent = gold;
+          localStorage.setItem("gold", gold);
+        }
+      }, 30);
+    }
+
+    function shootProjectile(x, y, target, damage) {
+      const proj = document.createElement("div");
+      proj.className = "projectile";
+      proj.style.left = `${x + 7}px`;
+      proj.style.top = `${y + 7}px`;
+      gameArea.appendChild(proj);
+
+      const interval = setInterval(() => {
+        const dx = target.x - x;
+        x += dx * 0.1;
+        proj.style.left = `${x + 7}px`;
+
+        if (Math.abs(x - target.x) < 5) {
+          clearInterval(interval);
+          proj.remove();
+          target.hp -= damage;
+        }
+      }, 20);
+    }
+
+    function startWave() {
+      wave++;
+      waveDisplay.textContent = wave;
+      localStorage.setItem("wave", wave);
+
+      for (let i = 0; i < 5 + wave; i++) {
+        const delay = i * 1000;
+        setTimeout(() => {
+          let type = "normal";
+          if (Math.random() < 0.2) type = "fast";
+          else if (Math.random() < 0.1) type = "tank";
+          spawnEnemy(type);
+        }, delay);
+      }
+
+      setTimeout(startWave, (5 + wave) * 1000 + 2000);
+    }
+
+    startWave();
+  </script>
+</body>
+</html>
