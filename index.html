@@ -16,7 +16,8 @@
   <button onclick="upgradeTower()">Upgrade Torre (50 ouro)</button>
   <button id="nextRaidBtn" style="display:none;margin-left:10px;" onclick="nextRaid()">Próxima Raid</button>
 
-  <div id="game">
+  <div id="game" style="position:relative;">
+    <canvas id="pathsCanvas" width="1200" height="600" style="position:absolute;left:0;top:0;z-index:1;pointer-events:none;"></canvas>
     <div id="castle">
       <div id="castleHpBar"><div></div></div>
     </div>
