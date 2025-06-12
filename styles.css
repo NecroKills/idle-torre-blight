@@ -104,6 +104,16 @@ body {
   border: 2px solid #cc3300;
 }
 
+.tower-icon.freeze {
+  background-color: #00ccff;
+  border: 2px solid #0099cc;
+}
+
+.tower-icon.buff {
+  background-color: #33cc33;
+  border: 2px solid #009900;
+}
+
 .tower-details {
   flex-grow: 1;
 }

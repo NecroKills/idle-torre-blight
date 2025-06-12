@@ -392,8 +392,27 @@ function buildTowerAtSpot(type) {
   el.className = 'tower';
   el.style.left = spot.x + 'px';
   el.style.top = spot.y + 'px';
-  el.style.background = type === 'fast' ? 'yellow' : 'orange';
-  el.title = type === 'fast' ? 'Torre Rápida' : 'Torre Lenta (Área)';
+  
+  // Definir cor com base no tipo
+  switch(type) {
+    case 'fast': 
+      el.style.background = 'yellow'; 
+      el.title = 'Torre Rápida';
+      break;
+    case 'aoe': 
+      el.style.background = 'orange'; 
+      el.title = 'Torre de Área';
+      break;
+    case 'freeze': 
+      el.style.background = '#00ccff'; 
+      el.title = 'Torre de Resfriamento';
+      break;
+    case 'buff': 
+      el.style.background = '#33cc33'; 
+      el.title = 'Torre de Capacitação';
+      break;
+  }
+  
   gameArea.appendChild(el);
   
   // Registrar torre para lógica de ataque (agora com nível)
@@ -432,7 +451,18 @@ function buildTowerAtSpot(type) {
   rangeCircle.style.transform = 'translate(-50%, -50%)';
   rangeCircle.style.width = getTowerRange(tower) * 2 + 'px';
   rangeCircle.style.height = getTowerRange(tower) * 2 + 'px';
-  rangeCircle.style.border = '1px solid ' + (type === 'fast' ? 'yellow' : 'orange');
+  
+  // Cor do alcance baseada no tipo
+  switch(type) {
+    case 'fast': rangeCircle.style.border = '1px solid yellow'; break;
+    case 'aoe': rangeCircle.style.border = '1px solid orange'; break;
+    case 'freeze': rangeCircle.style.border = '1px solid #00ccff'; break;
+    case 'buff': 
+      rangeCircle.style.border = '1px solid #33cc33';
+      rangeCircle.style.background = 'rgba(51, 204, 51, 0.1)'; // Área de buff visível
+      break;
+  }
+  
   rangeCircle.style.borderRadius = '50%';
   rangeCircle.style.opacity = '0.2';
   rangeCircle.style.pointerEvents = 'none';
@@ -453,17 +483,38 @@ function buildTowerAtSpot(type) {
 
 // Função para calcular dano e alcance baseado no nível
 function getTowerDamage(tower) {
-  const baseDamage = tower.type === 'fast' ? towerDamage : Math.floor(towerDamage * 0.7);
+  let baseDamage;
+  switch(tower.type) {
+    case 'fast': baseDamage = towerDamage; break;
+    case 'aoe': baseDamage = Math.floor(towerDamage * 0.7); break;
+    case 'freeze': baseDamage = Math.floor(towerDamage * 0.5); break; // Dano baixo
+    case 'buff': baseDamage = 0; break; // Não causa dano
+    default: baseDamage = towerDamage;
+  }
   return baseDamage * (1 + (tower.level - 1) * 0.5); // +50% por nível
 }
 
 function getTowerRange(tower) {
-  const baseRange = tower.type === 'fast' ? 120 : 100;
+  let baseRange;
+  switch(tower.type) {
+    case 'fast': baseRange = 120; break;
+    case 'aoe': baseRange = 100; break;
+    case 'freeze': baseRange = 90; break;
+    case 'buff': baseRange = 80; break; // Alcance menor
+    default: baseRange = 100;
+  }
   return baseRange * (1 + (tower.level - 1) * 0.1); // +10% por nível
 }
 
 function getTowerCooldown(tower) {
-  const baseCooldown = tower.type === 'fast' ? 18 : 60;
+  let baseCooldown;
+  switch(tower.type) {
+    case 'fast': baseCooldown = 18; break;
+    case 'aoe': baseCooldown = 60; break;
+    case 'freeze': baseCooldown = 40; break;
+    case 'buff': baseCooldown = 10; break; // Atualização constante do buff
+    default: baseCooldown = 30;
+  }
   return baseCooldown * (1 - (tower.level - 1) * 0.1); // -10% por nível (mais rápido)
 }
 
@@ -538,15 +589,121 @@ function shootProjectileTower(tower, target, damage, color = 'yellow') {
   }, 20);
 }
 
+// Função para disparar projéteis com efeito de congelamento
+function shootFreezeProjectile(tower, target, damage, slowFactor) {
+  const proj = document.createElement('div');
+  proj.className = 'projectile';
+  proj.style.background = '#00ccff';
+  proj.style.left = tower.x + 'px';
+  proj.style.top = tower.y + 'px';
+  gameArea.appendChild(proj);
+  let px = tower.x;
+  let py = tower.y;
+  const projInterval = setInterval(() => {
+    const dx = target.x - px;
+    const dy = target.y - py;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist < 4) {
+      target.hp -= damage;
+      
+      // Aplicar efeito de lentidão
+      if (!target.slowed) {
+        target.originalSpeed = target.speed;
+        target.slowed = true;
+      }
+      
+      // Quanto maior o nível, maior a lentidão
+      const slowAmount = slowFactor * (1 + (tower.level - 1) * 0.2);
+      target.speed = target.originalSpeed * (1 - slowAmount);
+      
+      // Efeito visual de congelamento
+      target.element.style.boxShadow = `0 0 10px #00ccff`;
+      
+      // Remover efeito após um tempo
+      setTimeout(() => {
+        if (target && target.element && target.element.parentNode) {
+          target.speed = target.originalSpeed;
+          target.slowed = false;
+          target.element.style.boxShadow = '';
+        }
+      }, 2000 + tower.level * 500); // Duração aumenta com o nível
+      
+      clearInterval(projInterval);
+      proj.remove();
+      return;
+    }
+    px += (dx / dist) * 8;
+    py += (dy / dist) * 8;
+    proj.style.left = px + 'px';
+    proj.style.top = py + 'px';
+  }, 20);
+}
+
+// Função para aplicar buff às torres próximas
+function applyBuffToNearbyTowers(buffTower) {
+  const buffRange = getTowerRange(buffTower);
+  const buffFactor = 0.2 + (buffTower.level - 1) * 0.1; // 20% + 10% por nível
+  
+  // Verificar todas as torres para aplicar buff
+  for (const tower of builtTowers) {
+    // Não aplicar buff em si mesmo ou em outras torres de buff
+    if (tower === buffTower || tower.type === 'buff') continue;
+    
+    const dx = buffTower.x - tower.x;
+    const dy = buffTower.y - tower.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    // Se a torre está dentro do alcance do buff
+    if (dist < buffRange) {
+      // Marcar a torre como com buff ativo
+      tower.buffed = true;
+      tower.buffFactor = buffFactor;
+      
+      // Efeito visual de buff
+      if (!tower.buffEffect) {
+        tower.buffEffect = document.createElement('div');
+        tower.buffEffect.className = 'buff-effect';
+        tower.buffEffect.style.position = 'absolute';
+        tower.buffEffect.style.width = '30px';
+        tower.buffEffect.style.height = '30px';
+        tower.buffEffect.style.borderRadius = '50%';
+        tower.buffEffect.style.border = '2px solid #33cc33';
+        tower.buffEffect.style.boxShadow = '0 0 10px #33cc33';
+        tower.buffEffect.style.top = '50%';
+        tower.buffEffect.style.left = '50%';
+        tower.buffEffect.style.transform = 'translate(-50%, -50%)';
+        tower.buffEffect.style.pointerEvents = 'none';
+        tower.element.appendChild(tower.buffEffect);
+      }
+    } else if (tower.buffed) {
+      // Remover buff se a torre saiu do alcance
+      tower.buffed = false;
+      if (tower.buffEffect) {
+        tower.buffEffect.remove();
+        tower.buffEffect = null;
+      }
+    }
+  }
+}
+
 // Atualizar towersAttackLoop para usar os novos cálculos de dano/alcance/cooldown
 function towersAttackLoop() {
   for (const tower of builtTowers) {
     tower.cooldown = (tower.cooldown || 0) - 1;
-    // Torre rápida: atira rápido em 1 alvo
-    if (tower.type === 'fast') {
-      if (tower.cooldown <= 0) {
-        // Procura inimigo mais próximo em alcance
-        const towerRange = getTowerRange(tower);
+    
+    // Aplicar buff às torres próximas (torre de capacitação)
+    if (tower.type === 'buff') {
+      applyBuffToNearbyTowers(tower);
+      continue; // Não faz mais nada, só aplica buff
+    }
+    
+    // Verificar se está pronto para atacar
+    if (tower.cooldown <= 0) {
+      // Calcular alcance, considerando buff se aplicável
+      const towerRange = getTowerRange(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
+      
+      // Torre rápida: atira rápido em 1 alvo
+      if (tower.type === 'fast') {
         let minDist = 9999;
         let target = null;
         for (const enemy of enemies) {
@@ -559,25 +716,65 @@ function towersAttackLoop() {
           }
         }
         if (target) {
-          shootProjectileTower(tower, target, getTowerDamage(tower), 'yellow');
-          tower.cooldown = getTowerCooldown(tower);
+          // Calcular dano, considerando buff se aplicável
+          const damage = getTowerDamage(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
+          shootProjectileTower(tower, target, damage, 'yellow');
+          tower.cooldown = getTowerCooldown(tower) / (tower.buffed ? (1 + tower.buffFactor/2) : 1);
         }
-      }
-    } else if (tower.type === 'aoe') {
+      } 
       // Torre de área: atira devagar, mas atinge todos próximos
-      if (tower.cooldown <= 0) {
+      else if (tower.type === 'aoe') {
         let any = false;
-        const towerRange = getTowerRange(tower);
         for (const enemy of enemies) {
           const dx = tower.x - enemy.x;
           const dy = tower.y - enemy.y;
           const dist = Math.sqrt(dx*dx + dy*dy);
           if (dist < towerRange && enemy.hp > 0) {
-            shootProjectileTower(tower, enemy, getTowerDamage(tower), 'orange');
+            // Calcular dano, considerando buff se aplicável
+            const damage = getTowerDamage(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
+            shootProjectileTower(tower, enemy, damage, 'orange');
             any = true;
           }
         }
-        if (any) tower.cooldown = getTowerCooldown(tower);
+        if (any) tower.cooldown = getTowerCooldown(tower) / (tower.buffed ? (1 + tower.buffFactor/2) : 1);
+      }
+      // Torre de resfriamento: causa dano baixo e reduz velocidade
+      else if (tower.type === 'freeze') {
+        let minDist = 9999;
+        let target = null;
+        
+        // Priorizar inimigos não congelados
+        for (const enemy of enemies) {
+          const dx = tower.x - enemy.x;
+          const dy = tower.y - enemy.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < towerRange && enemy.hp > 0 && !enemy.slowed) {
+            minDist = dist;
+            target = enemy;
+          }
+        }
+        
+        // Se não encontrou nenhum não congelado, pega qualquer um
+        if (!target) {
+          for (const enemy of enemies) {
+            const dx = tower.x - enemy.x;
+            const dy = tower.y - enemy.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < towerRange && dist < minDist && enemy.hp > 0) {
+              minDist = dist;
+              target = enemy;
+            }
+          }
+        }
+        
+        if (target) {
+          // Calcular dano, considerando buff se aplicável
+          const damage = getTowerDamage(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
+          // Fator de lentidão base é 30% e aumenta 10% por nível
+          const slowFactor = 0.3 + (tower.level - 1) * 0.1;
+          shootFreezeProjectile(tower, target, damage, slowFactor);
+          tower.cooldown = getTowerCooldown(tower) / (tower.buffed ? (1 + tower.buffFactor/2) : 1);
+        }
       }
     }
   }
@@ -783,17 +980,18 @@ function showRadialMenu(x, y, pathIdx, spotIdx) {
   radialMenuSpot = {x, y};
   radialMenuSpotPathIdx = pathIdx;
   radialMenuSpotIdx = spotIdx;
-  // Opções: torre rápida (⚡) e torre lenta (🔥)
+  // Opções: torre rápida (⚡), torre lenta (🔥), torre de resfriamento (❄️), torre de capacitação (🧙)
   const opts = [
-    {icon: '⚡', type: 'fast'},
-    {icon: '🔥', type: 'aoe'}
+    {icon: '⚡', type: 'fast', angle: Math.PI/4},
+    {icon: '🔥', type: 'aoe', angle: 3*Math.PI/4},
+    {icon: '❄️', type: 'freeze', angle: 5*Math.PI/4},
+    {icon: '🧙', type: 'buff', angle: 7*Math.PI/4}
   ];
-  opts.forEach((opt, i) => {
-    const angle = Math.PI/2 + i * Math.PI; // 2 opções, opostas
+  opts.forEach((opt) => {
     const btn = document.createElement('div');
     btn.className = 'radial-option';
-    btn.style.left = (74 + Math.cos(angle)*50 - 24) + 'px';
-    btn.style.top = (74 + Math.sin(angle)*50 - 24) + 'px';
+    btn.style.left = (74 + Math.cos(opt.angle)*50 - 24) + 'px';
+    btn.style.top = (74 + Math.sin(opt.angle)*50 - 24) + 'px';
     btn.innerHTML = opt.icon;
     btn.onclick = (e) => {
       e.stopPropagation();
