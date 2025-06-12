@@ -205,25 +205,6 @@ function createNewPathOrBranch() {
   drawPaths();
 }
 
-// Atualizar posições das torres para proteger as novas fendas
-const towers = [
-  { x: 600, y: 180, range: 180, path: 0 },  // norte
-  { x: 600, y: 420, range: 180, path: 1 },   // sul
-  { x: 900, y: 300, range: 180, path: 2 },  // leste
-  { x: 300, y: 300, range: 180, path: 3 },   // oeste
-  { x: 900, y: 180, range: 180, path: 4 }    // nordeste
-];
-
-// Criar elemento torre visual
-function spawnTower(tower) {
-  const el = document.createElement("div");
-  el.className = "tower";
-  el.style.left = tower.x + "px";
-  el.style.top = tower.y + "px";
-  gameArea.appendChild(el);
-}
-towers.forEach(spawnTower);
-
 // Lista de inimigos vivos
 const enemies = [];
 
@@ -319,7 +300,6 @@ function spawnEnemy(type = "normal") {
   gameArea.appendChild(enemyEl);
   enemy.moveInterval = setInterval(() => {
     moveAlongPath(enemy);
-    towerAttack(enemy);
     if(enemy.hp <= 0) {
       clearInterval(enemy.moveInterval);
       enemy.element.remove();
@@ -336,17 +316,43 @@ function spawnEnemy(type = "normal") {
   enemies.push(enemy);
 }
 
+// Array para armazenar torres construídas
+let builtTowers = [];
+
+// Modificar buildTowerAtSpot para registrar a torre
+function buildTowerAtSpot(type) {
+  if (radialMenuSpotPathIdx == null || radialMenuSpotIdx == null) return;
+  const spot = allBuildSpots[radialMenuSpotPathIdx][radialMenuSpotIdx];
+  spot.tower = type;
+  // Adicionar torre visual
+  const el = document.createElement('div');
+  el.className = 'tower';
+  el.style.left = spot.x + 'px';
+  el.style.top = spot.y + 'px';
+  el.style.background = type === 'fast' ? 'yellow' : 'orange';
+  el.title = type === 'fast' ? 'Torre Rápida' : 'Torre Lenta (Área)';
+  gameArea.appendChild(el);
+  // Registrar torre para lógica de ataque
+  builtTowers.push({
+    x: spot.x,
+    y: spot.y,
+    type: type,
+    cooldown: 0
+  });
+  // Redesenhar pontos (remover ponto branco)
+  drawPaths();
+}
+
 // Função para disparar projéteis
-function shootProjectile(x, y, target, damage) {
-  const proj = document.createElement("div");
-  proj.className = "projectile";
-  proj.style.left = x + "px";
-  proj.style.top = y + "px";
+function shootProjectileTower(tower, target, damage, color = 'yellow') {
+  const proj = document.createElement('div');
+  proj.className = 'projectile';
+  proj.style.background = color;
+  proj.style.left = tower.x + 'px';
+  proj.style.top = tower.y + 'px';
   gameArea.appendChild(proj);
-
-  let px = x;
-  let py = y;
-
+  let px = tower.x;
+  let py = tower.y;
   const projInterval = setInterval(() => {
     const dx = target.x - px;
     const dy = target.y - py;
@@ -357,26 +363,57 @@ function shootProjectile(x, y, target, damage) {
       proj.remove();
       return;
     }
-    px += (dx / dist) * 6;
-    py += (dy / dist) * 6;
-    proj.style.left = px + "px";
-    proj.style.top = py + "px";
+    px += (dx / dist) * 8;
+    py += (dy / dist) * 8;
+    proj.style.left = px + 'px';
+    proj.style.top = py + 'px';
   }, 20);
 }
 
-// As torres atacam os inimigos dentro do alcance
-function towerAttack(enemy) {
-  towers.forEach(tower => {
-    const dx = tower.x - enemy.x;
-    const dy = tower.y - enemy.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist < tower.range && !enemy.hitCooldown) {
-      enemy.hitCooldown = true;
-      shootProjectile(tower.x, tower.y, enemy, towerDamage);
-      setTimeout(() => enemy.hitCooldown = false, 1000);
+// Função para ataque das torres
+function towersAttackLoop() {
+  for (const tower of builtTowers) {
+    tower.cooldown = (tower.cooldown || 0) - 1;
+    // Torre rápida: atira rápido em 1 alvo
+    if (tower.type === 'fast') {
+      if (tower.cooldown <= 0) {
+        // Procura inimigo mais próximo em alcance 120
+        let minDist = 9999;
+        let target = null;
+        for (const enemy of enemies) {
+          const dx = tower.x - enemy.x;
+          const dy = tower.y - enemy.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 120 && dist < minDist && enemy.hp > 0) {
+            minDist = dist;
+            target = enemy;
+          }
+        }
+        if (target) {
+          shootProjectileTower(tower, target, towerDamage, 'yellow');
+          tower.cooldown = 18; // rápido
+        }
+      }
+    } else if (tower.type === 'aoe') {
+      // Torre de área: atira devagar, mas atinge todos próximos
+      if (tower.cooldown <= 0) {
+        let any = false;
+        for (const enemy of enemies) {
+          const dx = tower.x - enemy.x;
+          const dy = tower.y - enemy.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 100 && enemy.hp > 0) {
+            shootProjectileTower(tower, enemy, Math.floor(towerDamage*0.7), 'orange');
+            any = true;
+          }
+        }
+        if (any) tower.cooldown = 60; // devagar
+      }
     }
-  });
+  }
 }
+// Loop de ataque das torres
+setInterval(towersAttackLoop, 30);
 
 function upgradeTower() {
   if (gold >= 50) {
@@ -577,20 +614,4 @@ window.addEventListener('click', function(e) {
   if (radialMenuActive && !radialMenu.contains(e.target)) {
     hideRadialMenu();
   }
-});
-// Construir torre no ponto
-function buildTowerAtSpot(type) {
-  if (radialMenuSpotPathIdx == null || radialMenuSpotIdx == null) return;
-  const spot = allBuildSpots[radialMenuSpotPathIdx][radialMenuSpotIdx];
-  spot.tower = type;
-  // Adicionar torre visual
-  const el = document.createElement('div');
-  el.className = 'tower';
-  el.style.left = spot.x + 'px';
-  el.style.top = spot.y + 'px';
-  el.style.background = type === 'fast' ? 'yellow' : 'orange';
-  el.title = type === 'fast' ? 'Torre Rápida' : 'Torre Lenta (Área)';
-  gameArea.appendChild(el);
-  // Redesenhar pontos (remover ponto branco)
-  drawPaths();
-} 
+}); 
