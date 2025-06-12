@@ -7,6 +7,7 @@ const castleHpBarInner = document.querySelector("#castleHpBar > div");
 const raidLevelDisplay = document.getElementById("raidLevel");
 const nextRaidBtn = document.getElementById("nextRaidBtn");
 const diamondsDisplay = document.getElementById("diamonds");
+const pauseBtn = document.getElementById("pauseBtn");
 
 // Estado inicial
 let gold = 300; // Ouro inicial sempre 300
@@ -14,6 +15,8 @@ let wave = 0; // Não usaremos mais o sistema de ondas
 let towerDamage = parseInt(localStorage.getItem("towerDamage")) || 10;
 let raidLevel = parseInt(localStorage.getItem("raidLevel")) || 1;
 let diamonds = parseInt(localStorage.getItem("diamonds")) || 0;
+let isPaused = false;
+let pausedByHelp = false; // flag para controlar a pausa do modal de ajuda
 
 goldDisplay.textContent = gold;
 waveDisplay.textContent = wave;
@@ -238,6 +241,7 @@ const enemies = [];
 
 // Função para mover inimigos entre waypoints do seu caminho
 function moveAlongPath(enemy) {
+  if (isPaused) return;
   const path = enemy.path;
   if (enemy.currentTargetIndex === undefined) enemy.currentTargetIndex = 1;
   const target = path[enemy.currentTargetIndex];
@@ -340,6 +344,7 @@ function spawnEnemy(type = "normal") {
   }, 50);
   
   enemy.moveInterval = setInterval(() => {
+    if (isPaused) return;
     moveAlongPath(enemy);
     if(enemy.hp <= 0) {
       clearInterval(enemy.moveInterval);
@@ -573,6 +578,7 @@ function shootProjectileTower(tower, target, damage, color = 'yellow') {
   let px = tower.x;
   let py = tower.y;
   const projInterval = setInterval(() => {
+    if (isPaused) return;
     const dx = target.x - px;
     const dy = target.y - py;
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -600,6 +606,7 @@ function shootFreezeProjectile(tower, target, damage, slowFactor) {
   let px = tower.x;
   let py = tower.y;
   const projInterval = setInterval(() => {
+    if (isPaused) return;
     const dx = target.x - px;
     const dy = target.y - py;
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -688,6 +695,7 @@ function applyBuffToNearbyTowers(buffTower) {
 
 // Atualizar towersAttackLoop para usar os novos cálculos de dano/alcance/cooldown
 function towersAttackLoop() {
+  if (isPaused) return;
   for (const tower of builtTowers) {
     tower.cooldown = (tower.cooldown || 0) - 1;
     
@@ -782,21 +790,34 @@ function towersAttackLoop() {
 
 // Função para exibir modal de ajuda
 function showHelp() {
+  if (!isPaused) {
+    pausedByHelp = true;
+    pauseGame();
+  }
   const modal = document.getElementById("helpModal");
   modal.style.display = "block";
   
-  // Adicionar listener para fechar no X
-  const closeBtn = modal.querySelector(".close");
-  closeBtn.onclick = function() {
+  const closeHelpModal = () => {
     modal.style.display = "none";
+    if (pausedByHelp) {
+      resumeGame();
+      pausedByHelp = false;
+    }
+    // Remove os listeners para não acumularem
+    window.removeEventListener('click', closeOnOutsideClick);
+    closeBtn.removeEventListener('click', closeHelpModal);
   };
+
+  const closeBtn = modal.querySelector(".close");
+  // Adiciona listeners que serão removidos ao fechar
+  closeBtn.addEventListener('click', closeHelpModal);
   
-  // Fechar ao clicar fora do modal
-  window.onclick = function(event) {
+  const closeOnOutsideClick = (event) => {
     if (event.target == modal) {
-      modal.style.display = "none";
+      closeHelpModal();
     }
   };
+  window.addEventListener('click', closeOnOutsideClick);
 }
 
 // Loop de ataque das torres
@@ -827,6 +848,7 @@ function startRaid() {
   createNewPathOrBranch(); // caminho inicial
   // Spawner de inimigos
   let spawnInterval = setInterval(() => {
+    if (isPaused) return;
     if (raidEnded) {
       clearInterval(spawnInterval);
       return;
@@ -838,6 +860,7 @@ function startRaid() {
   }, 1000);
   // Timer da raid
   raidInterval = setInterval(() => {
+    if (isPaused) return;
     if (raidEnded) {
       clearInterval(raidInterval);
       return;
@@ -934,6 +957,25 @@ function resetRaid() {
   activePath = null;
 }
 
+// --- Funções de Pausa ---
+function pauseGame() {
+    isPaused = true;
+    pauseBtn.textContent = "▶️";
+}
+
+function resumeGame() {
+    isPaused = false;
+    pauseBtn.textContent = "⏸️";
+}
+
+function togglePause() {
+    if (isPaused) {
+        resumeGame();
+    } else {
+        pauseGame();
+    }
+}
+
 // Iniciar o jogo quando a página carregar
 window.onload = function() {
   hideNextRaidBtn();
@@ -959,6 +1001,8 @@ window.onload = function() {
       }
     }
   });
+  // Adicionar listener para o botão de pausa
+  pauseBtn.addEventListener('click', togglePause);
 };
 
 // --- Radial Menu ---
