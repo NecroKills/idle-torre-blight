@@ -133,7 +133,7 @@ function generateBuildSpotsForPath(path) {
 function drawPaths() {
   ctx.clearRect(0, 0, pathsCanvas.width, pathsCanvas.height);
   ctx.lineWidth = 18;
-  ctx.strokeStyle = "#8B5A2B"; // cor de terra
+  ctx.strokeStyle = "#8B5A2B";
   ctx.lineCap = "round";
   for (const path of allPaths) {
     ctx.beginPath();
@@ -147,6 +147,7 @@ function drawPaths() {
   ctx.fillStyle = "#fff";
   for (const spots of allBuildSpots) {
     for (const spot of spots) {
+      if (spot.tower) continue;
       ctx.beginPath();
       ctx.arc(spot.x, spot.y, 10, 0, Math.PI * 2);
       ctx.fill();
@@ -502,4 +503,94 @@ function resetRaid() {
 window.onload = function() {
   hideNextRaidBtn();
   startRaid();
-}; 
+  // DEBUG: Verificar se o canvas está sendo encontrado
+  console.log('Canvas encontrado:', pathsCanvas);
+  // Adicionar listener de clique no canvas
+  pathsCanvas.addEventListener('click', function(e) {
+    if (radialMenuActive) return;
+    const rect = pathsCanvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    console.log('Canvas click:', mx, my);
+    for (let p = 0; p < allBuildSpots.length; p++) {
+      for (let s = 0; s < allBuildSpots[p].length; s++) {
+        const spot = allBuildSpots[p][s];
+        if (!spot.tower && Math.hypot(spot.x - mx, spot.y - my) < 14) {
+          console.log('Spot clicked:', spot, p, s);
+          e.stopPropagation();
+          showRadialMenu(spot.x, spot.y, p, s);
+          return;
+        }
+      }
+    }
+  });
+};
+
+// --- Radial Menu ---
+const radialMenu = document.getElementById("radialMenu");
+let radialMenuActive = false;
+let radialMenuSpot = null;
+let radialMenuSpotPathIdx = null;
+let radialMenuSpotIdx = null;
+
+function showRadialMenu(x, y, pathIdx, spotIdx) {
+  // Corrigir posição relativa ao #game, considerando offset do canvas
+  const left = x + pathsCanvas.offsetLeft - 74;
+  const top = y + pathsCanvas.offsetTop - 74;
+  radialMenu.innerHTML = '';
+  radialMenu.style.display = 'block';
+  radialMenu.style.left = left + 'px';
+  radialMenu.style.top = top + 'px';
+  radialMenuActive = true;
+  radialMenuSpot = {x, y};
+  radialMenuSpotPathIdx = pathIdx;
+  radialMenuSpotIdx = spotIdx;
+  // Opções: torre rápida (⚡) e torre lenta (🔥)
+  const opts = [
+    {icon: '⚡', type: 'fast'},
+    {icon: '🔥', type: 'aoe'}
+  ];
+  opts.forEach((opt, i) => {
+    const angle = Math.PI/2 + i * Math.PI; // 2 opções, opostas
+    const btn = document.createElement('div');
+    btn.className = 'radial-option';
+    btn.style.left = (74 + Math.cos(angle)*50 - 24) + 'px';
+    btn.style.top = (74 + Math.sin(angle)*50 - 24) + 'px';
+    btn.innerHTML = opt.icon;
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      buildTowerAtSpot(opt.type);
+      hideRadialMenu();
+    };
+    radialMenu.appendChild(btn);
+  });
+  console.log('RadialMenu HTML:', radialMenu.innerHTML);
+}
+function hideRadialMenu() {
+  radialMenu.style.display = 'none';
+  radialMenu.innerHTML = '';
+  radialMenuActive = false;
+  radialMenuSpot = null;
+}
+// Esconder menu ao clicar fora
+window.addEventListener('click', function(e) {
+  if (radialMenuActive && !radialMenu.contains(e.target)) {
+    hideRadialMenu();
+  }
+});
+// Construir torre no ponto
+function buildTowerAtSpot(type) {
+  if (radialMenuSpotPathIdx == null || radialMenuSpotIdx == null) return;
+  const spot = allBuildSpots[radialMenuSpotPathIdx][radialMenuSpotIdx];
+  spot.tower = type;
+  // Adicionar torre visual
+  const el = document.createElement('div');
+  el.className = 'tower';
+  el.style.left = spot.x + 'px';
+  el.style.top = spot.y + 'px';
+  el.style.background = type === 'fast' ? 'yellow' : 'orange';
+  el.title = type === 'fast' ? 'Torre Rápida' : 'Torre Lenta (Área)';
+  gameArea.appendChild(el);
+  // Redesenhar pontos (remover ponto branco)
+  drawPaths();
+} 

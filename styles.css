@@ -11,7 +11,7 @@ body {
   height: 600px;
   background: #333;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 10px;
   border: 2px solid #666;
 }
@@ -21,7 +21,7 @@ body {
   left: 0;
   top: 0;
   z-index: 0;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .tower {
@@ -93,4 +93,32 @@ body {
   background: lime;
   width: 100%;
   transition: width 0.3s;
+}
+
+#radialMenu {
+  pointer-events: auto;
+  z-index: 100;
+  background: rgba(255,0,0,0.12); /* debug, mais sutil */
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+}
+.radial-option {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #222;
+  border: 3px solid gold;
+  color: #fff;
+  font-size: 2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+}
+.radial-option:hover {
+  background: #444;
+  border-color: #fff;
 } 

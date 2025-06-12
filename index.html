@@ -17,10 +17,11 @@
   <button id="nextRaidBtn" style="display:none;margin-left:10px;" onclick="nextRaid()">Próxima Raid</button>
 
   <div id="game" style="position:relative;">
-    <canvas id="pathsCanvas" width="1200" height="600" style="position:absolute;left:0;top:0;z-index:1;pointer-events:none;"></canvas>
+    <canvas id="pathsCanvas" width="1200" height="600" style="position:absolute;left:0;top:0;z-index:0;"></canvas>
     <div id="castle">
       <div id="castleHpBar"><div></div></div>
     </div>
+    <div id="radialMenu" style="display:none; position:absolute;"></div>
   </div>
 
   <script src="game.js"></script>
