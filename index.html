@@ -8,14 +8,14 @@
 <body>
   <div class="header">
     <h1>Idle Tower Defense</h1>
-    <button id="helpBtn" onclick="showHelp()">❓</button>
+    <button id="helpBtn">❓</button>
     <button id="pauseBtn">⏸️</button>
   </div>
   <div>Ouro: <span id="gold">0</span></div>
   <div>Diamantes: <span id="diamonds">0</span></div>
   <div>Onda: <span id="wave">0</span></div>
   <div>Nível da Raid: <span id="raidLevel">1</span></div>
-  <button id="nextRaidBtn" style="display:none;margin-left:10px;" onclick="nextRaid()">Próxima Raid</button>
+  <button id="nextRaidBtn" style="display:none;margin-left:10px;">Próxima Raid</button>
 
   <div id="game" style="position:relative;">
     <canvas id="pathsCanvas" width="1200" height="600" style="position:absolute;left:0;top:0;z-index:0;"></canvas>
@@ -139,6 +139,6 @@
     </div>
   </div>
 
-  <script src="game.js"></script>
+  <script type="module" src="game.js"></script>
 </body>
 </html> 

@@ -1,3 +1,13 @@
+import { 
+    RAID_DURATION, 
+    NUM_SECTORS, 
+    CASTLE_EXCLUSION_HALF_SIZE, 
+    CENTER_X, 
+    CENTER_Y, 
+    TOWER_UPGRADE_COSTS 
+} from './js/data/constants.js';
+// import { getTowerDamage, getTowerRange, getTowerCooldown } from './js/data/tower-stats.js'; // REMOVIDO
+
 const gameArea = document.getElementById("game");
 const goldDisplay = document.getElementById("gold");
 const waveDisplay = document.getElementById("wave");
@@ -7,6 +17,7 @@ const raidLevelDisplay = document.getElementById("raidLevel");
 const nextRaidBtn = document.getElementById("nextRaidBtn");
 const diamondsDisplay = document.getElementById("diamonds");
 const pauseBtn = document.getElementById("pauseBtn");
+const helpBtn = document.getElementById("helpBtn");
 
 // Estado inicial
 let gold = 300; // Ouro inicial sempre 300
@@ -23,7 +34,6 @@ raidLevelDisplay.textContent = raidLevel;
 diamondsDisplay.textContent = diamonds;
 
 // RAID CONFIG
-const RAID_DURATION = 360; // 6 minutos em segundos
 let raidTime = 0;
 let raidInterval = null;
 let activeRifts = 1; // Começa com 1 fenda
@@ -31,9 +41,7 @@ let bossSpawned = false;
 let raidEnded = false;
 
 // --- Configuração dos Caminhos ---
-const NUM_SECTORS = 8; // Dividir o mapa em 8 setores para os caminhos
 let occupiedSectors = [];
-const CASTLE_EXCLUSION_HALF_SIZE = 45; // Metade do tamanho do #castle (90px)
 
 // Castelo
 let castleMaxHp = 100;
@@ -83,10 +91,6 @@ function updateCastleHp() {
   }
 }
 updateCastleHp();
-
-// Novo centro
-const centerX = 600;
-const centerY = 300;
 
 // --- Caminhos Dinâmicos ---
 const pathsCanvas = document.getElementById("pathsCanvas");
@@ -164,8 +168,8 @@ function generateCleanPath(start, end, segments = 7, mergesWithCenter = true) {
     if (mergesWithCenter) {
         // For the main trunk, find intersection with the square exclusion zone
         const lastPoint = waypoints[waypoints.length - 1];
-        const dx = centerX - lastPoint.x;
-        const dy = centerY - lastPoint.y;
+        const dx = CENTER_X - lastPoint.x;
+        const dy = CENTER_Y - lastPoint.y;
         const angle = Math.atan2(dy, dx);
 
         // Account for line thickness (18/2=9) by adding it to the distance
@@ -181,8 +185,8 @@ function generateCleanPath(start, end, segments = 7, mergesWithCenter = true) {
         const unitDy = dy / totalDist;
         
         // Calculate the final point by moving from the center back along the line
-        const finalX = centerX - unitDx * finalDistance;
-        const finalY = centerY - unitDy * finalDistance;
+        const finalX = CENTER_X - unitDx * finalDistance;
+        const finalY = CENTER_Y - unitDy * finalDistance;
 
         waypoints.push({x: finalX, y: finalY});
     } else {
@@ -195,7 +199,7 @@ function generateCleanPath(start, end, segments = 7, mergesWithCenter = true) {
 
 function isPositionValid(x, y, allSpotArrays, minDistance) {
     // Check against central square exclusion zone
-    if (Math.abs(x - centerX) < CASTLE_EXCLUSION_HALF_SIZE && Math.abs(y - centerY) < CASTLE_EXCLUSION_HALF_SIZE) {
+    if (Math.abs(x - CENTER_X) < CASTLE_EXCLUSION_HALF_SIZE && Math.abs(y - CENTER_Y) < CASTLE_EXCLUSION_HALF_SIZE) {
         return false;
     }
     
@@ -302,7 +306,7 @@ function drawPaths() {
 
 function createNewPath() {
     if (occupiedSectors.length >= NUM_SECTORS) return;
-    const center = {x: centerX, y: centerY};
+    const center = {x: CENTER_X, y: CENTER_Y};
     const availableSectors = Array.from({length: NUM_SECTORS}, (_, i) => i)
                                   .filter(s => !occupiedSectors.includes(s));
     if (availableSectors.length === 0) return;
@@ -477,9 +481,6 @@ function spawnEnemy(type = "normal") {
 // Array para armazenar torres construídas
 let builtTowers = [];
 
-// Custos de upgrade de torre por nível
-const towerUpgradeCosts = [50, 100, 150, 300, 500]; // Nível 0→1, 1→2, 2→3, 3→4, 4→5
-
 // Função para verificar se tem ouro suficiente
 function hasEnoughGold(amount) {
   if (gold >= amount) {
@@ -495,7 +496,7 @@ function hasEnoughGold(amount) {
 function buildTowerAtSpot(type, clickedButton) {
   if (radialMenuSpotPathIdx == null || radialMenuSpotIdx == null) return false;
   
-  const cost = towerUpgradeCosts[0];
+  const cost = TOWER_UPGRADE_COSTS[0];
   // Verificar se tem ouro suficiente para nível 1
   if (gold < cost) {
     if(clickedButton) {
@@ -670,7 +671,7 @@ function upgradeTowerAtSpot(tower) {
     return;
   }
   
-  const cost = towerUpgradeCosts[tower.level]; 
+  const cost = TOWER_UPGRADE_COSTS[tower.level]; 
   
   if (gold < cost) {
     tower.element.classList.add('shake-error');
@@ -721,7 +722,7 @@ function updateTowerTooltip(tower) {
     if (tower.level >= 5) {
         tower.tooltip.textContent = 'Nível Máximo';
     } else {
-        const cost = towerUpgradeCosts[tower.level];
+        const cost = TOWER_UPGRADE_COSTS[tower.level];
         tower.tooltip.textContent = `Upgrade: ${cost}g`;
         if (gold < cost) {
             tower.tooltip.style.color = '#ff8a8a'; // Vermelho claro para indicar falta de ouro
@@ -871,8 +872,8 @@ function towersAttackLoop() {
     
     // Verificar se está pronto para atacar
     if (tower.cooldown <= 0) {
-      // Calcular alcance, considerando buff se aplicável
-      const towerRange = getTowerRange(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
+      // Calcular alcance. O buff NÃO afeta mais o alcance.
+      const towerRange = getTowerRange(tower);
       
       // Torre rápida: atira rápido no inimigo com menos vida
       if (tower.type === 'fast') {
@@ -1183,8 +1184,10 @@ window.onload = function() {
       }
     }
   });
-  // Adicionar listener para o botão de pausa
+  // Adicionar listeners para os botões
   pauseBtn.addEventListener('click', togglePause);
+  helpBtn.addEventListener('click', showHelp);
+  nextRaidBtn.addEventListener('click', nextRaid);
 };
 
 // --- Radial Menu ---
