@@ -345,15 +345,50 @@ body {
     transform: rotate(20deg);
 }
 
+#bottom-hud {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+}
+
+#hudTitle {
+    color: #fff;
+    font-size: 1.1em;
+    font-weight: bold;
+    margin-bottom: 5px;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+}
+
+#castleHpPercentage {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-size: 0.9em;
+    font-weight: bold;
+    text-shadow: 1px 1px 1px #000, -1px -1px 1px #000, 1px -1px 1px #000, -1px 1px 1px #000;
+    z-index: 5; /* Para ficar sobre a barra interna */
+}
+
 #castleHpBar {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 45px;
-  height: 5px;
+  position: relative; /* Necessário para posicionar o texto dentro */
+  width: 100%;
+  height: 20px;
   background: #444;
-  border-radius: 3px;
+  border-radius: 5px;
+  border: 2px solid #222;
   overflow: hidden;
   z-index: 4;
 }

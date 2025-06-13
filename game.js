@@ -1,7 +1,8 @@
 const gameArea = document.getElementById("game");
 const goldDisplay = document.getElementById("gold");
 const waveDisplay = document.getElementById("wave");
-const castleHpBarInner = document.querySelector("#castleHpBar > div");
+const castleHpBarInner = document.querySelector("#castleHpBar > div:last-child");
+const castleHpPercentage = document.getElementById("castleHpPercentage");
 const raidLevelDisplay = document.getElementById("raidLevel");
 const nextRaidBtn = document.getElementById("nextRaidBtn");
 const diamondsDisplay = document.getElementById("diamonds");
@@ -39,8 +40,12 @@ let castleMaxHp = 100;
 let castleHp = castleMaxHp;
 
 function updateCastleHp() {
-  const perc = Math.max(0, (castleHp / castleMaxHp) * 100);
+  // Guard clause para evitar múltiplas execuções de 'game over'
+  if (raidEnded) return;
+
+  const perc = Math.round(Math.max(0, (castleHp / castleMaxHp) * 100));
   castleHpBarInner.style.width = perc + "%";
+  castleHpPercentage.textContent = `${perc}%`;
 
   // Altera a cor da barra de vida
   if (perc > 50) {
@@ -51,24 +56,30 @@ function updateCastleHp() {
     castleHpBarInner.style.backgroundColor = 'red';
   }
 
-  if (castleHp <= 0 && !raidEnded) {
+  if (castleHp <= 0) {
     raidEnded = true;
-    
-    // Cria um overlay de game over para não bloquear a renderização
-    const gameOverOverlay = document.createElement('div');
-    gameOverOverlay.id = 'gameOverOverlay';
-    gameOverOverlay.innerHTML = `
-        <h1>Fim de Jogo</h1>
-        <p>A base foi destruída!</p>
-        <p>Reiniciando em 3 segundos...</p>
-    `;
-    gameArea.appendChild(gameOverOverlay);
+    pauseGame(); // Pausa o jogo imediatamente para parar todas as outras ações.
 
-    // Pausa o jogo e recarrega após um delay
-    pauseGame();
+    // Força a atualização final da UI
+    castleHpBarInner.style.width = '0%';
+    castleHpPercentage.textContent = '0%';
+    
+    // Adia a sobreposição de fim de jogo para garantir que a UI seja renderizada.
     setTimeout(() => {
-        location.reload();
-    }, 3000);
+        const gameOverOverlay = document.createElement('div');
+        gameOverOverlay.id = 'gameOverOverlay';
+        gameOverOverlay.innerHTML = `
+            <h1>Fim de Jogo</h1>
+            <p>A base foi destruída!</p>
+            <p>Reiniciando em 3 segundos...</p>
+        `;
+        gameArea.appendChild(gameOverOverlay);
+
+        // Um segundo timeout para o recarregamento.
+        setTimeout(() => {
+            location.reload();
+        }, 3000);
+    }, 50); // Um pequeno delay para a renderização.
   }
 }
 updateCastleHp();
