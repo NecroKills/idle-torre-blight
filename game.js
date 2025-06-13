@@ -1203,6 +1203,7 @@ function showRadialMenu(x, y, pathIdx, spotIdx) {
   });
 }
 function hideRadialMenu() {
+  if (!radialMenuActive) return;
   radialMenu.style.display = 'none';
   radialMenu.innerHTML = '';
   radialMenuActive = false;
@@ -1359,7 +1360,89 @@ function buildTowerAtSpot(type, clickedButton) {
     updateTowerTooltip(tower);
   };
   
+  towerElement.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    hideRadialMenu();
+    showSellMenu(e, tower);
+  });
+  
   builtTowers.push(tower);
   drawPaths();
   return true;
-} 
+}
+
+// --- Funções do Menu de Venda ---
+const sellMenu = document.getElementById('sellMenu');
+let sellMenuActive = false;
+
+function showSellMenu(event, tower) {
+  const menuLeft = tower.x + pathsCanvas.offsetLeft - sellMenu.offsetWidth / 2;
+  const menuTop = tower.y + pathsCanvas.offsetTop - sellMenu.offsetHeight - 10; // Posiciona acima da torre
+
+  sellMenu.style.left = `${menuLeft}px`;
+  sellMenu.style.top = `${menuTop}px`;
+  sellMenu.style.display = 'block';
+  sellMenu.innerHTML = ''; // Limpa antes de adicionar
+  sellMenuActive = true;
+
+  const sellBtn = document.createElement('div');
+  sellBtn.className = 'sell-option';
+  sellBtn.innerHTML = '🔨';
+  sellBtn.title = 'Vender Torre';
+  sellBtn.onclick = (e) => {
+    e.stopPropagation();
+    sellTower(tower);
+    hideSellMenu();
+  };
+  
+  sellMenu.appendChild(sellBtn);
+}
+
+function hideSellMenu() {
+  if (!sellMenuActive) return;
+  sellMenu.style.display = 'none';
+  sellMenu.innerHTML = '';
+  sellMenuActive = false;
+}
+
+function sellTower(tower) {
+  let totalCost = 0;
+  // Soma os custos de todos os níveis até o atual
+  for (let i = 0; i < tower.level; i++) {
+    totalCost += TOWER_UPGRADE_COSTS[i];
+  }
+
+  const refund = Math.ceil((totalCost * 0.3) / 10) * 10;
+  
+  gold += refund;
+  goldDisplay.textContent = gold;
+  localStorage.setItem("gold", gold);
+
+  // Remove a torre do array
+  const towerIndex = builtTowers.findIndex(t => t === tower);
+  if (towerIndex > -1) {
+    builtTowers.splice(towerIndex, 1);
+  }
+
+  // Libera o local de construção
+  allBuildSpots[tower.spotPathIdx][tower.spotIdx].tower = null;
+
+  // Remove o elemento da torre do DOM
+  tower.element.remove();
+
+  // Redesenha os caminhos para mostrar o local vazio
+  drawPaths();
+}
+
+// Esconder menus ao clicar fora
+window.addEventListener('click', function(e) {
+  if (radialMenuActive && !radialMenu.contains(e.target)) {
+    hideRadialMenu();
+  }
+  if (sellMenuActive && !sellMenu.contains(e.target)) {
+    // Verifica se o clique não foi numa torre, para não fechar ao tentar abrir
+    if (!e.target.classList.contains('tower')) {
+      hideSellMenu();
+    }
+  }
+}); 

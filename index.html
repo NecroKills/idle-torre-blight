@@ -30,6 +30,7 @@
           </div>
         </div>
         <div id="radialMenu" style="display:none; position:absolute;"></div>
+        <div id="sellMenu"></div>
       </div>
   </div>
 
@@ -45,98 +46,125 @@
     <div class="modal-content">
       <span class="close">&times;</span>
       <h2>Ajuda do Jogo</h2>
+      
+      <div class="help-section">
+        <h4>Objetivo</h4>
+        <p>Sobreviva a uma raid de 6 minutos. Proteja sua base de extração construindo e melhorando torres para derrotar os inimigos que vêm em hordas. A cada raid sobrevivente, você ganha diamantes e passa para um nível de dificuldade maior.</p>
+      </div>
+
       <div class="help-section">
         <h3>Torres Disponíveis</h3>
         <div class="tower-info">
           <div class="tower-icon fast">⚡</div>
-          <div class="tower-details">
-            <h4>Torre Rápida ⚡</h4>
-            <p>Atira rápido em um único alvo</p>
-            <p>Velocidade alta, dano moderado</p>
-          </div>
+          <div class="tower-details"><h4>Torre Rápida ⚡</h4><p>Atira rápido em um único alvo. Velocidade alta, dano moderado.</p></div>
         </div>
         <div class="tower-info">
           <div class="tower-icon aoe">🔥</div>
-          <div class="tower-details">
-            <h4>Torre de Área 🔥</h4>
-            <p>Atira devagar, mas atinge múltiplos inimigos</p>
-            <p>Velocidade baixa, dano em área</p>
-          </div>
+          <div class="tower-details"><h4>Torre de Área 🔥</h4><p>Atira devagar, mas atinge múltiplos inimigos. Dano em área.</p></div>
         </div>
         <div class="tower-info">
           <div class="tower-icon freeze">❄️</div>
-          <div class="tower-details">
-            <h4>Torre de Resfriamento ❄️</h4>
-            <p>Causa dano baixo, mas reduz a velocidade dos inimigos</p>
-            <p>Efeito de lentidão aumenta com o nível</p>
-          </div>
+          <div class="tower-details"><h4>Torre de Resfriamento ❄️</h4><p>Causa dano baixo, mas reduz a velocidade dos inimigos.</p></div>
         </div>
         <div class="tower-info">
           <div class="tower-icon buff">🧙</div>
-          <div class="tower-details">
-            <h4>Torre de Capacitação 🧙</h4>
-            <p>Não causa dano, mas aumenta a eficácia de outras torres</p>
-            <p>Torres dentro do alcance recebem bônus de dano e velocidade</p>
-          </div>
+          <div class="tower-details"><h4>Torre de Capacitação 🧙</h4><p>Não ataca, mas aumenta a eficácia das torres próximas.</p></div>
         </div>
         <div class="tower-info">
           <div class="tower-icon sniper">🎯</div>
-          <div class="tower-details">
-            <h4>Torre de Precisão 🎯</h4>
-            <p>Causa dano massivo a um único alvo, priorizando o mais forte</p>
-            <p>Dano muito alto, velocidade muito baixa</p>
-          </div>
+          <div class="tower-details"><h4>Torre de Precisão 🎯</h4><p>Causa dano massivo a um único alvo, priorizando o mais forte.</p></div>
         </div>
+      </div>
+
+      <div class="help-section">
         <h3>Níveis de Torres</h3>
         <table class="tower-levels">
-          <tr><th>Nível</th><th>Custo</th><th>Efeito</th></tr>
-          <tr><td>1</td><td>50 ouro</td><td>Base</td></tr>
-          <tr><td>2</td><td>100 ouro</td><td>+50% dano, +10% alcance, -10% recarga</td></tr>
-          <tr><td>3</td><td>150 ouro</td><td>+100% dano, +20% alcance, -20% recarga</td></tr>
-          <tr><td>4</td><td>300 ouro</td><td>+150% dano, +30% alcance, -30% recarga</td></tr>
-          <tr><td>5</td><td>500 ouro</td><td>+200% dano, +40% alcance, -40% recarga</td></tr>
+          <thead><tr><th>Nível</th><th>Custo do Upgrade</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>50 Ouro (Construção)</td></tr>
+            <tr><td>2</td><td>100 Ouro</td></tr>
+            <tr><td>3</td><td>150 Ouro</td></tr>
+            <tr><td>4</td><td>300 Ouro</td></tr>
+            <tr><td>5</td><td>500 Ouro</td></tr>
+          </tbody>
         </table>
+        <p>Cada nível aumenta o dano, alcance e/ou velocidade de ataque da torre.</p>
+
         <h3>Comparativo de Torres por Nível</h3>
         <table class="tower-details-table">
-          <tr>
-            <th>Tipo</th>
-            <th>Nível</th>
-            <th>Dano</th>
-            <th>Velocidade de Ataque</th>
-            <th>Alcance</th>
-            <th>Efeito Especial</th>
-          </tr>
-          <!-- Torre Rápida -->
-          <tr><td rowspan="5">⚡<br>Torre Rápida</td><td>1</td><td>10</td><td>Rápida</td><td>120</td><td>-</td></tr>
-          <tr><td>2</td><td>15</td><td>+10%</td><td>132</td><td>-</td></tr>
-          <tr><td>3</td><td>20</td><td>+20%</td><td>144</td><td>-</td></tr>
-          <tr><td>4</td><td>25</td><td>+30%</td><td>156</td><td>-</td></tr>
-          <tr><td>5</td><td>30</td><td>+40%</td><td>168</td><td>-</td></tr>
-          <!-- Torre de Área -->
-          <tr><td rowspan="5">🔥<br>Torre de Área</td><td>1</td><td>7</td><td>Lenta</td><td>100</td><td>Dano em área</td></tr>
-          <tr><td>2</td><td>10.5</td><td>+10%</td><td>110</td><td>Dano em área</td></tr>
-          <tr><td>3</td><td>14</td><td>+20%</td><td>120</td><td>Dano em área</td></tr>
-          <tr><td>4</td><td>17.5</td><td>+30%</td><td>130</td><td>Dano em área</td></tr>
-          <tr><td>5</td><td>21</td><td>+40%</td><td>140</td><td>Dano em área</td></tr>
-          <!-- Torre de Resfriamento -->
-          <tr><td rowspan="5">❄️<br>Torre de Resfriamento</td><td>1</td><td>5</td><td>Média</td><td>90</td><td>Lentidão 30%</td></tr>
-          <tr><td>2</td><td>7.5</td><td>+10%</td><td>99</td><td>Lentidão 40%</td></tr>
-          <tr><td>3</td><td>10</td><td>+20%</td><td>108</td><td>Lentidão 50%</td></tr>
-          <tr><td>4</td><td>12.5</td><td>+30%</td><td>117</td><td>Lentidão 60%</td></tr>
-          <tr><td>5</td><td>15</td><td>+40%</td><td>126</td><td>Lentidão 70%</td></tr>
-          <!-- Torre de Capacitação -->
-          <tr><td rowspan="5">🧙<br>Torre de Capacitação</td><td>1</td><td>0</td><td>-</td><td>80</td><td>Buff: +20% dano/+10% vel.</td></tr>
-          <tr><td>2</td><td>0</td><td>-</td><td>88</td><td>Buff: +30% dano/+15% vel.</td></tr>
-          <tr><td>3</td><td>0</td><td>-</td><td>96</td><td>Buff: +40% dano/+20% vel.</td></tr>
-          <tr><td>4</td><td>0</td><td>-</td><td>104</td><td>Buff: +50% dano/+25% vel.</td></tr>
-          <tr><td>5</td><td>0</td><td>-</td><td>112</td><td>Buff: +60% dano/+30% vel.</td></tr>
-          <!-- Torre de Precisão -->
-          <tr><td rowspan="5">🎯<br>Torre de Precisão</td><td>1</td><td>50</td><td>Muito Lenta</td><td>220</td><td>Prioriza o mais forte</td></tr>
-          <tr><td>2</td><td>75</td><td>+10%</td><td>242</td><td>Prioriza o mais forte</td></tr>
-          <tr><td>3</td><td>100</td><td>+20%</td><td>264</td><td>Prioriza o mais forte</td></tr>
-          <tr><td>4</td><td>125</td><td>+30%</td><td>286</td><td>Prioriza o mais forte</td></tr>
-          <tr><td>5</td><td>150</td><td>+40%</td><td>308</td><td>Prioriza o mais forte</td></tr>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Nível</th>
+              <th>Dano</th>
+              <th>Velocidade de Ataque</th>
+              <th>Alcance</th>
+              <th>Efeito Especial</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Torre Rápida -->
+            <tr><td rowspan="5">⚡<br>Torre Rápida</td><td>1</td><td>10</td><td>Rápida</td><td>120</td><td>-</td></tr>
+            <tr><td>2</td><td>15</td><td>+10%</td><td>132</td><td>-</td></tr>
+            <tr><td>3</td><td>20</td><td>+20%</td><td>144</td><td>-</td></tr>
+            <tr><td>4</td><td>25</td><td>+30%</td><td>156</td><td>-</td></tr>
+            <tr><td>5</td><td>30</td><td>+40%</td><td>168</td><td>-</td></tr>
+            <!-- Torre de Área -->
+            <tr><td rowspan="5">🔥<br>Torre de Área</td><td>1</td><td>7</td><td>Lenta</td><td>100</td><td>Dano em área</td></tr>
+            <tr><td>2</td><td>10.5</td><td>+10%</td><td>110</td><td>Dano em área</td></tr>
+            <tr><td>3</td><td>14</td><td>+20%</td><td>120</td><td>Dano em área</td></tr>
+            <tr><td>4</td><td>17.5</td><td>+30%</td><td>130</td><td>Dano em área</td></tr>
+            <tr><td>5</td><td>21</td><td>+40%</td><td>140</td><td>Dano em área</td></tr>
+            <!-- Torre de Resfriamento -->
+            <tr><td rowspan="5">❄️<br>Torre de Resfriamento</td><td>1</td><td>5</td><td>Média</td><td>90</td><td>Lentidão 30%</td></tr>
+            <tr><td>2</td><td>7.5</td><td>+10%</td><td>99</td><td>Lentidão 40%</td></tr>
+            <tr><td>3</td><td>10</td><td>+20%</td><td>108</td><td>Lentidão 50%</td></tr>
+            <tr><td>4</td><td>12.5</td><td>+30%</td><td>117</td><td>Lentidão 60%</td></tr>
+            <tr><td>5</td><td>15</td><td>+40%</td><td>126</td><td>Lentidão 70%</td></tr>
+            <!-- Torre de Capacitação -->
+            <tr><td rowspan="5">🧙<br>Torre de Capacitação</td><td>1</td><td>0</td><td>-</td><td>80</td><td>Buff: +20% dano/+10% vel.</td></tr>
+            <tr><td>2</td><td>0</td><td>-</td><td>88</td><td>Buff: +30% dano/+15% vel.</td></tr>
+            <tr><td>3</td><td>0</td><td>-</td><td>96</td><td>Buff: +40% dano/+20% vel.</td></tr>
+            <tr><td>4</td><td>0</td><td>-</td><td>104</td><td>Buff: +50% dano/+25% vel.</td></tr>
+            <tr><td>5</td><td>0</td><td>-</td><td>112</td><td>Buff: +60% dano/+30% vel.</td></tr>
+            <!-- Torre de Precisão -->
+            <tr><td rowspan="5">🎯<br>Torre de Precisão</td><td>1</td><td>50</td><td>Muito Lenta</td><td>220</td><td>Prioriza o mais forte</td></tr>
+            <tr><td>2</td><td>75</td><td>+10%</td><td>242</td><td>Prioriza o mais forte</td></tr>
+            <tr><td>3</td><td>100</td><td>+20%</td><td>264</td><td>Prioriza o mais forte</td></tr>
+            <tr><td>4</td><td>125</td><td>+30%</td><td>286</td><td>Prioriza o mais forte</td></tr>
+            <tr><td>5</td><td>30</td><td>+40%</td><td>308</td><td>Prioriza o mais forte</td></tr>
+          </tbody>
         </table>
+      </div>
+      
+      <div class="help-section">
+        <h4>Vender Torres</h4>
+        <p>Clique com o botão direito do mouse em uma torre para vendê-la. Você receberá 30% do total de ouro investido nela, arredondado para a próxima dezena, conforme a tabela abaixo:</p>
+        <table class="tower-levels">
+          <thead>
+            <tr><th>Nível da Torre</th><th>Ouro Retornado</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Nível 1</td><td>20g</td></tr>
+            <tr><td>Nível 2</td><td>50g</td></tr>
+            <tr><td>Nível 3</td><td>90g</td></tr>
+            <tr><td>Nível 4</td><td>180g</td></tr>
+            <tr><td>Nível 5</td><td>330g</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="help-section">
+        <h4>Inimigos</h4>
+        <p>Os inimigos surgem de portais nas bordas do mapa e seguem os caminhos em direção à sua base. Existem tipos diferentes: normais, rápidos (laranjas) e tanques (azuis). No final da raid, um chefe poderoso (roxo) aparecerá!</p>
+      </div>
+
+      <div class="help-section">
+        <h4>Economia e Controles</h4>
+        <p><strong>Ouro:</strong> Ganho ao derrotar inimigos. Usado para construir e melhorar torres.</p>
+        <p><strong>Diamantes:</strong> Recompensa por sobreviver a uma raid. Usado para melhorias permanentes (ainda não implementado).</p>
+        <p><strong>Pausa:</strong> Use o botão ⏸️ para pausar/retomar o jogo.</p>
+        <p><strong>Câmera:</strong> Use a roda do mouse para dar zoom e clique com o botão do meio (ou Ctrl + clique) para arrastar o mapa.</p>
       </div>
     </div>
   </div>
