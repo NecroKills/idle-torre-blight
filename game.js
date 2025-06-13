@@ -32,6 +32,10 @@ let activeRifts = 1; // Começa com 1 fenda
 let bossSpawned = false;
 let raidEnded = false;
 
+// --- Configuração dos Caminhos ---
+const NUM_SECTORS = 8; // Dividir o mapa em 8 setores para os caminhos
+let occupiedSectors = [];
+
 // Castelo
 let castleMaxHp = 100;
 let castleHp = castleMaxHp;
@@ -72,28 +76,74 @@ function randomBetween(a, b) {
   return a + Math.random() * (b - a);
 }
 
-function generateRandomPath(start, end, minSegments = 5, maxSegments = 8) {
-  // Gera um caminho "torto" de start até a borda do castelo
-  const waypoints = [start];
-  let prev = start;
-  let last = start;
-  for (let i = 1; i < minSegments + Math.floor(Math.random() * (maxSegments-minSegments+1)); i++) {
-    const t = i / (minSegments + 1);
-    const x = prev.x + (end.x - prev.x) * t + randomBetween(-120, 120);
-    const y = prev.y + (end.y - prev.y) * t + randomBetween(-80, 80);
-    waypoints.push({x, y});
-    prev = {x, y};
-    last = prev;
-  }
-  // Calcular ponto final na borda do castelo
-  const dx = end.x - last.x;
-  const dy = end.y - last.y;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-  const castleRadius = 30; // metade do tamanho do castelo
-  const finalX = end.x - (dx/dist) * castleRadius;
-  const finalY = end.y - (dy/dist) * castleRadius;
-  waypoints.push({x: finalX, y: finalY});
-  return waypoints;
+function getStartPointForAngle(angle) {
+    const w = 1200, h = 600;
+    const center = { x: w / 2, y: h / 2 };
+    
+    const tanTheta = Math.tan(angle);
+    const cornerTan = (h/2)/(w/2);
+
+    let x, y;
+
+    if (Math.abs(tanTheta) < cornerTan) {
+        if (Math.cos(angle) > 0) { // Right edge
+            x = w;
+            y = center.y - (w/2) * tanTheta;
+        } else { // Left edge
+            x = 0;
+            y = center.y + (w/2) * tanTheta;
+        }
+    } else {
+        if (Math.sin(angle) > 0) { // Bottom edge
+            y = h;
+            x = center.x - (h/2) / tanTheta;
+        } else { // Top edge
+            y = 0;
+            x = center.x + (h/2) / tanTheta;
+        }
+    }
+    return { x, y };
+}
+
+function generateCleanPath(start, end, segments = 7) {
+    const waypoints = [start];
+    const totalVec = { x: end.x - start.x, y: end.y - start.y };
+    const totalDist = Math.hypot(totalVec.x, totalVec.y);
+    const perpVec = { x: -totalVec.y / totalDist, y: totalVec.x / totalDist };
+
+    for (let i = 1; i < segments; i++) {
+        const progress = i / segments;
+        const pointOnLine = {
+            x: start.x + totalVec.x * progress,
+            y: start.y + totalVec.y * progress
+        };
+        
+        const maxOffset = 150 * (1 - progress * 0.8);
+        const offset = randomBetween(-maxOffset, maxOffset);
+        
+        let pointX = pointOnLine.x + perpVec.x * offset;
+        let pointY = pointOnLine.y + perpVec.y * offset;
+        
+        // Clamp to canvas bounds with a margin
+        pointX = Math.max(15, Math.min(1185, pointX));
+        pointY = Math.max(15, Math.min(585, pointY));
+        
+        waypoints.push({
+            x: pointX,
+            y: pointY
+        });
+    }
+
+    const last = waypoints[waypoints.length - 1];
+    const dx = end.x - last.x;
+    const dy = end.y - last.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const castleRadius = 30;
+    const finalX = end.x - (dx/dist) * castleRadius;
+    const finalY = end.y - (dy/dist) * castleRadius;
+    waypoints.push({x: finalX, y: finalY});
+
+    return waypoints;
 }
 
 function isPositionValid(x, y, allSpotArrays, minDistance) {
@@ -111,7 +161,7 @@ function isPositionValid(x, y, allSpotArrays, minDistance) {
     return true;
 }
 
-function generateBuildSpotsForPath(path) {
+function generateBuildSpotsForPath(path, existingSpotArrays) {
   const spots = [];
   const numSpots = 6 + Math.floor(Math.random() * 4); // 6 a 9 pontos por caminho
   const minSpotDist = 25;
@@ -129,6 +179,7 @@ function generateBuildSpotsForPath(path) {
         randomDist = 20;
       } else {
         const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
+        if (!path[segIdx]) continue; // Safety check
         base = path[segIdx];
         randomDist = 30;
       }
@@ -138,7 +189,7 @@ function generateBuildSpotsForPath(path) {
       const x = base.x + Math.cos(angle) * dist;
       const y = base.y + Math.sin(angle) * dist;
       
-      if (isPositionValid(x, y, [spots, ...allBuildSpots], minSpotDist)) {
+      if (isPositionValid(x, y, [spots, ...existingSpotArrays], minSpotDist)) {
         spots.push({ x, y });
         break; 
       }
@@ -196,57 +247,46 @@ function drawPaths() {
   }
 }
 
-function addBuildSpotsToExistingPaths() {
-  const minSpotDist = 25;
-  for (let i = 0; i < allPaths.length - 1; i++) { // exceto o novo
-    const path = allPaths[i];
-    const spots = allBuildSpots[i];
-    const addCount = 1 + Math.floor(Math.random() * 3); // 1 a 3
-    for (let j = 0; j < addCount; j++) {
-      for (let attempt = 0; attempt < 20; attempt++) {
-        const segIdx = 1 + Math.floor(Math.random() * (path.length - 2));
-        const base = path[segIdx];
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 30 + Math.random() * 30;
-        const x = base.x + Math.cos(angle) * dist;
-        const y = base.y + Math.sin(angle) * dist;
-        
-        if (isPositionValid(x, y, allBuildSpots, minSpotDist)) {
-            spots.push({ x, y });
-            break;
-        }
-      }
-    }
-  }
-}
+function createNewPath() {
+    if (occupiedSectors.length >= NUM_SECTORS) return;
+    const center = {x: centerX, y: centerY};
+    const availableSectors = Array.from({length: NUM_SECTORS}, (_, i) => i)
+                                  .filter(s => !occupiedSectors.includes(s));
+    if (availableSectors.length === 0) return;
+    const chosenSector = availableSectors[Math.floor(Math.random() * availableSectors.length)];
+    occupiedSectors.push(chosenSector);
 
-function createNewPathOrBranch() {
-  // Decide se cria novo caminho ou ramifica
-  const center = {x: centerX, y: centerY};
-  let start;
-  if (allPaths.length === 0 || Math.random() < 0.5) {
-    // Novo caminho: escolhe borda aleatória
-    const side = Math.floor(Math.random()*4);
-    if (side === 0) start = {x: randomBetween(0, 1200), y: 0}; // topo
-    if (side === 1) start = {x: randomBetween(0, 1200), y: 600}; // baixo
-    if (side === 2) start = {x: 0, y: randomBetween(0, 600)}; // esquerda
-    if (side === 3) start = {x: 1200, y: randomBetween(0, 600)}; // direita
-    const path = generateRandomPath(start, center);
-    allPaths.push(path);
-    activePath = path;
-    allBuildSpots.push(generateBuildSpotsForPath(path));
-  } else {
-    // Ramifica de um ponto aleatório de um caminho existente
-    const basePath = allPaths[Math.floor(Math.random()*allPaths.length)];
-    const branchIdx = Math.floor(randomBetween(1, basePath.length-2));
-    start = basePath[branchIdx];
-    const path = generateRandomPath(start, {x: centerX, y: centerY});
-    allPaths.push(path);
-    activePath = path;
-    allBuildSpots.push(generateBuildSpotsForPath(path));
-  }
-  addBuildSpotsToExistingPaths();
-  drawPaths();
+    const sectorAngle = (2 * Math.PI) / NUM_SECTORS;
+    const midAngle = sectorAngle * chosenSector + sectorAngle / 2;
+    const randomAngle = midAngle + randomBetween(-sectorAngle / 4, sectorAngle / 4);
+    const start = getStartPointForAngle(randomAngle);
+
+    // If it's the first path, create the main TRUNK.
+    if (allPaths.length === 0) {
+        const path = generateCleanPath(start, center);
+        allPaths.push(path);
+        allBuildSpots.push(generateBuildSpotsForPath(path, []));
+    } 
+    // Otherwise, create a BRANCH that merges into the trunk.
+    else {
+        const trunkPath = allPaths[0];
+        // Merge into the middle part of the trunk
+        const mergeIndex = Math.floor(randomBetween(trunkPath.length * 0.3, trunkPath.length * 0.7));
+        const mergePoint = trunkPath[mergeIndex];
+
+        // Generate the branch path from the new start to the merge point
+        const branchWaypoints = generateCleanPath(start, mergePoint);
+        
+        // The final path for enemies is the branch + the rest of the trunk
+        const trunkSegment = trunkPath.slice(mergeIndex);
+        const finalPath = [...branchWaypoints, ...trunkSegment];
+        allPaths.push(finalPath);
+        
+        // Generate build spots for the new branch segment only
+        allBuildSpots.push(generateBuildSpotsForPath(branchWaypoints, allBuildSpots));
+    }
+    
+    drawPaths();
 }
 
 // Lista de inimigos vivos
@@ -908,8 +948,8 @@ function startRaid() {
   waveDisplay.textContent = "0:00";
   allPaths = [];
   allBuildSpots = [];
-  activePath = null;
-  createNewPathOrBranch(); // caminho inicial
+  occupiedSectors = [];
+  createNewPath(); // caminho inicial (tronco)
   // Spawner de inimigos
   let spawnInterval = setInterval(() => {
     if (isPaused) return;
@@ -934,8 +974,8 @@ function startRaid() {
     let sec = raidTime % 60;
     waveDisplay.textContent = `${min}:${sec.toString().padStart(2, '0')}`;
     // A cada minuto, cria novo caminho ou ramificação
-    if (raidTime % 60 === 0) {
-      createNewPathOrBranch();
+    if (raidTime > 0 && raidTime % 60 === 0) {
+      createNewPath();
     }
     // Garantir boss aos 4 minutos
     if (raidTime === 240 && !bossSpawned) {
@@ -1018,7 +1058,7 @@ function resetRaid() {
   // Limpa caminhos e pontos de construção
   allPaths = [];
   allBuildSpots = [];
-  activePath = null;
+  occupiedSectors = [];
 }
 
 // --- Funções de Pausa ---
