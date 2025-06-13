@@ -486,6 +486,10 @@ function buildTowerAtSpot(type, clickedButton) {
       el.style.background = '#33cc33'; 
       el.title = 'Torre de Capacitação';
       break;
+    case 'sniper':
+      el.style.background = '#8A2BE2';
+      el.title = 'Torre de Precisão';
+      break;
   }
   
   gameArea.appendChild(el);
@@ -574,6 +578,7 @@ function getTowerDamage(tower) {
     case 'aoe': baseDamage = Math.floor(towerDamage * 0.7); break;
     case 'freeze': baseDamage = Math.floor(towerDamage * 0.5); break; // Dano baixo
     case 'buff': baseDamage = 0; break; // Não causa dano
+    case 'sniper': baseDamage = towerDamage * 5; break; // Dano muito alto
     default: baseDamage = towerDamage;
   }
   return baseDamage * (1 + (tower.level - 1) * 0.5); // +50% por nível
@@ -586,6 +591,7 @@ function getTowerRange(tower) {
     case 'aoe': baseRange = 100; break;
     case 'freeze': baseRange = 90; break;
     case 'buff': baseRange = 80; break; // Alcance menor
+    case 'sniper': baseRange = 180; break; // Alcance muito alto
     default: baseRange = 100;
   }
   return baseRange * (1 + (tower.level - 1) * 0.1); // +10% por nível
@@ -598,6 +604,7 @@ function getTowerCooldown(tower) {
     case 'aoe': baseCooldown = 60; break;
     case 'freeze': baseCooldown = 40; break;
     case 'buff': baseCooldown = 10; break; // Atualização constante do buff
+    case 'sniper': baseCooldown = 150; break; // Recarga muito lenta
     default: baseCooldown = 30;
   }
   return baseCooldown * (1 - (tower.level - 1) * 0.1); // -10% por nível (mais rápido)
@@ -888,6 +895,25 @@ function towersAttackLoop() {
           tower.cooldown = getTowerCooldown(tower) / (tower.buffed ? (1 + tower.buffFactor/2) : 1);
         }
       }
+      // Torre de Precisão: atira no inimigo com mais vida
+      else if (tower.type === 'sniper') {
+        let maxHp = -1;
+        let target = null;
+        for (const enemy of enemies) {
+            const dx = tower.x - enemy.x;
+            const dy = tower.y - enemy.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < towerRange && enemy.hp > maxHp) {
+                maxHp = enemy.hp;
+                target = enemy;
+            }
+        }
+        if (target) {
+            const damage = getTowerDamage(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
+            shootProjectileTower(tower, target, damage, '#8A2BE2');
+            tower.cooldown = getTowerCooldown(tower) / (tower.buffed ? (1 + tower.buffFactor/2) : 1);
+        }
+      }
     }
   }
 }
@@ -1130,16 +1156,22 @@ function showRadialMenu(x, y, pathIdx, spotIdx) {
   radialMenuSpotIdx = spotIdx;
   // Opções: torre rápida (⚡), torre lenta (🔥), torre de resfriamento (❄️), torre de capacitação (🧙)
   const opts = [
-    {icon: '⚡', type: 'fast', angle: Math.PI/4},
-    {icon: '🔥', type: 'aoe', angle: 3*Math.PI/4},
-    {icon: '❄️', type: 'freeze', angle: 5*Math.PI/4},
-    {icon: '🧙', type: 'buff', angle: 7*Math.PI/4}
+    {icon: '⚡', type: 'fast'},
+    {icon: '🔥', type: 'aoe'},
+    {icon: '❄️', type: 'freeze'},
+    {icon: '🧙', type: 'buff'},
+    {icon: '🎯', type: 'sniper'}
   ];
-  opts.forEach((opt) => {
+  const numOpts = opts.length;
+  const angleStep = (2 * Math.PI) / numOpts;
+  const startAngle = -Math.PI / 2; // Começar do topo
+
+  opts.forEach((opt, i) => {
+    const angle = startAngle + i * angleStep;
     const btn = document.createElement('div');
     btn.className = 'radial-option';
-    btn.style.left = (74 + Math.cos(opt.angle)*50 - 24) + 'px';
-    btn.style.top = (74 + Math.sin(opt.angle)*50 - 24) + 'px';
+    btn.style.left = (74 + Math.cos(angle)*50 - 24) + 'px';
+    btn.style.top = (74 + Math.sin(angle)*50 - 24) + 'px';
     btn.innerHTML = opt.icon;
     btn.onclick = (e) => {
       e.stopPropagation();

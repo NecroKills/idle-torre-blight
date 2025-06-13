@@ -114,6 +114,12 @@ body {
   border: 2px solid #009900;
 }
 
+.tower-icon.sniper {
+  background-color: #8A2BE2;
+  border: 2px solid #4B0082;
+  color: #fff;
+}
+
 .tower-details {
   flex-grow: 1;
 }
