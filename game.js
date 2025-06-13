@@ -506,138 +506,6 @@ function hasEnoughGold(amount) {
   return false;
 }
 
-// Modificar buildTowerAtSpot para considerar custo e nível
-function buildTowerAtSpot(type, clickedButton) {
-  if (radialMenuSpotPathIdx == null || radialMenuSpotIdx == null) return false;
-  
-  const cost = TOWER_UPGRADE_COSTS[0];
-  // Verificar se tem ouro suficiente para nível 1
-  if (gold < cost) {
-    if(clickedButton) {
-        clickedButton.classList.add('shake-error-simple');
-        setTimeout(() => {
-            clickedButton.classList.remove('shake-error-simple');
-        }, 400);
-    }
-    return false; // Falha
-  }
-  
-  // Deduz ouro
-  gold -= cost;
-  goldDisplay.textContent = gold;
-  localStorage.setItem("gold", gold);
-  
-  const spot = allBuildSpots[radialMenuSpotPathIdx][radialMenuSpotIdx];
-  spot.tower = type;
-  
-  // Adicionar torre visual
-  const el = document.createElement('div');
-  el.className = 'tower';
-  el.style.left = spot.x + 'px';
-  el.style.top = spot.y + 'px';
-  
-  // Definir cor com base no tipo
-  switch(type) {
-    case 'fast': 
-      el.style.background = 'yellow'; 
-      el.title = 'Torre Rápida';
-      break;
-    case 'aoe': 
-      el.style.background = 'orange'; 
-      el.title = 'Torre de Área';
-      break;
-    case 'freeze': 
-      el.style.background = '#00ccff'; 
-      el.title = 'Torre de Resfriamento';
-      break;
-    case 'buff': 
-      el.style.background = '#33cc33'; 
-      el.title = 'Torre de Capacitação';
-      break;
-    case 'sniper':
-      el.style.background = '#8A2BE2';
-      el.title = 'Torre de Precisão';
-      break;
-  }
-  
-  gameArea.appendChild(el);
-  
-  // Registrar torre para lógica de ataque (agora com nível)
-  const tower = {
-    x: spot.x,
-    y: spot.y,
-    type: type,
-    cooldown: 0,
-    level: 1,
-    element: el,
-    spotPathIdx: radialMenuSpotPathIdx,
-    spotIdx: radialMenuSpotIdx
-  };
-  
-  // Adicionar texto de nível
-  const levelText = document.createElement('div');
-  levelText.className = 'tower-level';
-  levelText.textContent = '1';
-  levelText.style.position = 'absolute';
-  levelText.style.top = '50%';
-  levelText.style.left = '50%';
-  levelText.style.transform = 'translate(-50%, -50%)';
-  levelText.style.color = 'black';
-  levelText.style.fontWeight = 'bold';
-  levelText.style.fontSize = '10px';
-  levelText.style.pointerEvents = 'none';
-  el.appendChild(levelText);
-  tower.levelText = levelText;
-  
-  // Adicionar visualização de alcance
-  const rangeCircle = document.createElement('div');
-  rangeCircle.className = 'tower-range';
-  rangeCircle.style.position = 'absolute';
-  rangeCircle.style.top = '50%';
-  rangeCircle.style.left = '50%';
-  rangeCircle.style.transform = 'translate(-50%, -50%)';
-  rangeCircle.style.width = getTowerRange(tower) * 2 + 'px';
-  rangeCircle.style.height = getTowerRange(tower) * 2 + 'px';
-  
-  // Cor do alcance baseada no tipo
-  switch(type) {
-    case 'fast': rangeCircle.style.border = '1px solid yellow'; break;
-    case 'aoe': rangeCircle.style.border = '1px solid orange'; break;
-    case 'freeze': rangeCircle.style.border = '1px solid #00ccff'; break;
-    case 'buff': 
-      rangeCircle.style.border = '1px solid #33cc33';
-      rangeCircle.style.background = 'rgba(51, 204, 51, 0.1)'; // Área de buff visível
-      break;
-  }
-  
-  rangeCircle.style.borderRadius = '50%';
-  rangeCircle.style.opacity = '0.2';
-  rangeCircle.style.pointerEvents = 'none';
-  el.appendChild(rangeCircle);
-  tower.rangeCircle = rangeCircle;
-  
-  // Adicionar tooltip para custo de upgrade
-  const tooltip = document.createElement('div');
-  tooltip.className = 'tower-tooltip';
-  el.appendChild(tooltip);
-  tower.tooltip = tooltip;
-  
-  // Adicionar interaction (click para upgrade, hover para info)
-  el.style.cursor = 'pointer';
-  el.onclick = (e) => {
-    e.stopPropagation();
-    upgradeTowerAtSpot(tower);
-  };
-  el.onmouseenter = () => {
-    updateTowerTooltip(tower);
-  };
-  
-  builtTowers.push(tower);
-  // Redesenhar pontos (remover ponto branco)
-  drawPaths();
-  return true; // Sucesso
-}
-
 // Função para calcular dano e alcance baseado no nível
 function getTowerDamage(tower) {
   let baseDamage;
@@ -872,116 +740,143 @@ function applyBuffToNearbyTowers(buffTower) {
   }
 }
 
+function findTarget(tower) {
+    const towerRange = getTowerRange(tower);
+    let target = null;
+
+    // A lógica de mira difere por tipo de torre
+    switch (tower.type) {
+        case 'fast': {
+            let minHp = Infinity;
+            for (const enemy of enemies) {
+                const dist = Math.hypot(tower.x - enemy.x, tower.y - enemy.y);
+                if (dist < towerRange && enemy.hp > 0 && enemy.hp < minHp) {
+                    minHp = enemy.hp;
+                    target = enemy;
+                }
+            }
+            break;
+        }
+        case 'sniper': {
+            let maxHp = -1;
+            for (const enemy of enemies) {
+                const dist = Math.hypot(tower.x - enemy.x, tower.y - enemy.y);
+                if (dist < towerRange && enemy.hp > 0 && enemy.hp > maxHp) {
+                    maxHp = enemy.hp;
+                    target = enemy;
+                }
+            }
+            break;
+        }
+        case 'freeze': {
+            let minDist = Infinity;
+            let finalTarget = null;
+            // Prioriza inimigos não lentos
+            for (const enemy of enemies) {
+                const dist = Math.hypot(tower.x - enemy.x, tower.y - enemy.y);
+                if (dist < towerRange && enemy.hp > 0 && !enemy.slowed && dist < minDist) {
+                    minDist = dist;
+                    finalTarget = enemy;
+                }
+            }
+            // Se todos estiverem lentos, ataca o mais próximo
+            if (!finalTarget) {
+                minDist = Infinity;
+                for (const enemy of enemies) {
+                     const dist = Math.hypot(tower.x - enemy.x, tower.y - enemy.y);
+                     if (dist < towerRange && enemy.hp > 0 && dist < minDist) {
+                        minDist = dist;
+                        finalTarget = enemy;
+                     }
+                }
+            }
+            target = finalTarget;
+            break;
+        }
+        case 'aoe': // Para mira, a torre de área foca no inimigo mais próximo
+        default: { // Comportamento padrão: mirar no mais próximo
+            let minDist = Infinity;
+            for (const enemy of enemies) {
+                const dist = Math.hypot(tower.x - enemy.x, tower.y - enemy.y);
+                if (dist < towerRange && enemy.hp > 0 && dist < minDist) {
+                    minDist = dist;
+                    target = enemy;
+                }
+            }
+            break;
+        }
+    }
+    return target;
+}
+
 // Atualizar towersAttackLoop para usar os novos cálculos de dano/alcance/cooldown
 function towersAttackLoop() {
   if (isPaused) return;
   for (const tower of builtTowers) {
-    tower.cooldown = (tower.cooldown || 0) - 1;
-    
-    // Aplicar buff às torres próximas (torre de capacitação)
+    tower.cooldown -= 1;
+
+    // Lógica de Buff (não ataca)
     if (tower.type === 'buff') {
       applyBuffToNearbyTowers(tower);
-      continue; // Não faz mais nada, só aplica buff
+      continue; 
     }
     
-    // Verificar se está pronto para atacar
-    if (tower.cooldown <= 0) {
-      // Calcular alcance. O buff NÃO afeta mais o alcance.
-      const towerRange = getTowerRange(tower);
-      
-      // Torre rápida: atira rápido no inimigo com menos vida
-      if (tower.type === 'fast') {
-        let minHp = Infinity;
-        let target = null;
+    // Lógica de ataque para a torre de Área (AOE)
+    if (tower.type === 'aoe') {
+      if (tower.cooldown <= 0) {
+        let fired = false;
+        const towerRange = getTowerRange(tower);
         for (const enemy of enemies) {
-          const dx = tower.x - enemy.x;
-          const dy = tower.y - enemy.y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < towerRange && enemy.hp < minHp && enemy.hp > 0) {
-            minHp = enemy.hp;
-            target = enemy;
-          }
-        }
-        if (target) {
-          // Calcular dano, considerando buff se aplicável
-          const damage = getTowerDamage(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
-          shootProjectileTower(tower, target, damage, 'yellow');
-          tower.cooldown = getTowerCooldown(tower) / (tower.buffed ? (1 + tower.buffFactor/2) : 1);
-        }
-      } 
-      // Torre de área: atira devagar, mas atinge todos próximos
-      else if (tower.type === 'aoe') {
-        let any = false;
-        for (const enemy of enemies) {
-          const dx = tower.x - enemy.x;
-          const dy = tower.y - enemy.y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
+          const dist = Math.hypot(tower.x - enemy.x, tower.y - enemy.y);
           if (dist < towerRange && enemy.hp > 0) {
-            // Calcular dano, considerando buff se aplicável
-            const damage = getTowerDamage(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
-            shootProjectileTower(tower, enemy, damage, 'orange');
-            any = true;
+            shootProjectileTower(tower, enemy, getTowerDamage(tower), 'orange');
+            fired = true;
           }
         }
-        if (any) tower.cooldown = getTowerCooldown(tower) / (tower.buffed ? (1 + tower.buffFactor/2) : 1);
-      }
-      // Torre de resfriamento: causa dano baixo e reduz velocidade
-      else if (tower.type === 'freeze') {
-        let minDist = 9999;
-        let target = null;
-        
-        // Priorizar inimigos não congelados
-        for (const enemy of enemies) {
-          const dx = tower.x - enemy.x;
-          const dy = tower.y - enemy.y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < towerRange && enemy.hp > 0 && !enemy.slowed) {
-            minDist = dist;
-            target = enemy;
-          }
-        }
-        
-        // Se não encontrou nenhum não congelado, pega qualquer um
-        if (!target) {
-          for (const enemy of enemies) {
-            const dx = tower.x - enemy.x;
-            const dy = tower.y - enemy.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < towerRange && dist < minDist && enemy.hp > 0) {
-              minDist = dist;
-              target = enemy;
-            }
-          }
-        }
-        
-        if (target) {
-          // Calcular dano, considerando buff se aplicável
-          const damage = getTowerDamage(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
-          // Fator de lentidão base é 30% e aumenta 10% por nível
-          const slowFactor = 0.3 + (tower.level - 1) * 0.1;
-          shootFreezeProjectile(tower, target, damage, slowFactor);
-          tower.cooldown = getTowerCooldown(tower) / (tower.buffed ? (1 + tower.buffFactor/2) : 1);
+        if (fired) {
+          tower.cooldown = getTowerCooldown(tower);
         }
       }
-      // Torre de Precisão: atira no inimigo com mais vida
-      else if (tower.type === 'sniper') {
-        let maxHp = -1;
-        let target = null;
-        for (const enemy of enemies) {
-            const dx = tower.x - enemy.x;
-            const dy = tower.y - enemy.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < towerRange && enemy.hp > maxHp) {
-                maxHp = enemy.hp;
-                target = enemy;
-            }
-        }
-        if (target) {
-            const damage = getTowerDamage(tower) * (tower.buffed ? (1 + tower.buffFactor) : 1);
-            shootProjectileTower(tower, target, damage, '#8A2BE2');
-            tower.cooldown = getTowerCooldown(tower) / (tower.buffed ? (1 + tower.buffFactor/2) : 1);
-        }
+      continue; // Pula o resto do loop para a torre AOE
+    }
+
+    // --- Lógica para todas as outras torres (de alvo único) ---
+
+    // 1. Encontrar um alvo
+    const target = findTarget(tower);
+
+    // 2. Apontar a arma se ela existir
+    if (tower.gunElement) {
+      if (target) {
+        const angleDeg = Math.atan2(target.y - tower.y, target.x - tower.x) * 180 / Math.PI;
+        tower.gunElement.style.transform = `rotate(${angleDeg + 90}deg)`;
       }
+    }
+
+    // 3. Atirar se houver um alvo e o cooldown estiver pronto
+    if (target && tower.cooldown <= 0) {
+      const damage = getTowerDamage(tower);
+
+      // Animação de tiro (apenas para a torre rápida)
+      if (tower.spinnerElement) {
+          tower.spinnerElement.classList.add('is-shooting');
+          setTimeout(() => {
+              if (tower.spinnerElement) {
+                 tower.spinnerElement.classList.remove('is-shooting');
+              }
+          }, 200);
+      }
+      
+      // Disparar o projétil correto
+      if (tower.type === 'freeze') {
+          shootFreezeProjectile(tower, target, damage, 0.5);
+      } else {
+          const color = tower.type === 'sniper' ? '#8A2BE2' : 'yellow';
+          shootProjectileTower(tower, target, damage, color);
+      }
+
+      // Resetar cooldown
+      tower.cooldown = getTowerCooldown(tower);
     }
   }
 }
@@ -1187,8 +1082,6 @@ function screenToWorld(clientX, clientY) {
 window.onload = function() {
   hideNextRaidBtn();
   startRaid();
-  // DEBUG: Verificar se o canvas está sendo encontrado
-  console.log('Canvas encontrado:', pathsCanvas);
   // Adicionar listener de clique no canvas
   pathsCanvas.addEventListener('click', function(e) {
     if (radialMenuActive) return;
@@ -1197,12 +1090,10 @@ window.onload = function() {
     const mx = worldCoords.x;
     const my = worldCoords.y;
 
-    console.log('Canvas click (world):', mx, my);
     for (let p = 0; p < allBuildSpots.length; p++) {
       for (let s = 0; s < allBuildSpots[p].length; s++) {
         const spot = allBuildSpots[p][s];
         if (!spot.tower && Math.hypot(spot.x - mx, spot.y - my) < 14) {
-          console.log('Spot clicked:', spot, p, s);
           e.stopPropagation();
           showRadialMenu(spot.x, spot.y, p, s);
           return;
@@ -1310,7 +1201,6 @@ function showRadialMenu(x, y, pathIdx, spotIdx) {
     };
     radialMenu.appendChild(btn);
   });
-  console.log('RadialMenu HTML:', radialMenu.innerHTML);
 }
 function hideRadialMenu() {
   radialMenu.style.display = 'none';
@@ -1323,4 +1213,153 @@ window.addEventListener('click', function(e) {
   if (radialMenuActive && !radialMenu.contains(e.target)) {
     hideRadialMenu();
   }
-}); 
+});
+
+function buildTowerAtSpot(type, clickedButton) {
+  if (radialMenuSpotPathIdx == null || radialMenuSpotIdx == null) return false;
+  
+  const cost = TOWER_UPGRADE_COSTS[0];
+  if (gold < cost) {
+    if(clickedButton) {
+        clickedButton.classList.add('shake-error-simple');
+        setTimeout(() => {
+            clickedButton.classList.remove('shake-error-simple');
+        }, 400);
+    }
+    return false;
+  }
+  
+  gold -= cost;
+  goldDisplay.textContent = gold;
+  localStorage.setItem("gold", gold);
+  
+  const spot = allBuildSpots[radialMenuSpotPathIdx][radialMenuSpotIdx];
+  spot.tower = type;
+  
+  const towerElement = document.createElement('div');
+  towerElement.className = 'tower';
+  towerElement.style.left = spot.x + 'px';
+  towerElement.style.top = spot.y + 'px';
+
+  const tower = {
+    x: spot.x,
+    y: spot.y,
+    type: type,
+    cooldown: 0,
+    level: 1,
+    element: towerElement,
+    spotPathIdx: radialMenuSpotPathIdx,
+    spotIdx: radialMenuSpotIdx
+  };
+  
+  const towerSize = 20;
+  towerElement.style.width = towerSize + 'px';
+  towerElement.style.height = towerSize + 'px';
+  towerElement.innerHTML = ''; 
+
+  if (type === "fast") {
+    towerElement.style.backgroundColor = "transparent";
+    towerElement.classList.add('fast-tower');
+    towerElement.title = 'Torre Rápida';
+
+    const base = document.createElement('div');
+    base.className = 'tower-base';
+    const glow = document.createElement('div');
+    glow.className = 'gun-glow';
+    const gunContainer = document.createElement('div');
+    gunContainer.className = 'gun-container';
+    const gun = document.createElement('div');
+    gun.className = 'tower-gun';
+    const barrel = document.createElement('div');
+    barrel.className = 'gun-barrel';
+    const spinner = document.createElement('div');
+    spinner.className = 'barrel-spinner';
+    const tip = document.createElement('div');
+    tip.className = 'barrel-tip';
+
+    barrel.appendChild(spinner);
+    gun.appendChild(barrel);
+    gun.appendChild(tip);
+    gunContainer.appendChild(gun);
+    
+    towerElement.appendChild(base);
+    towerElement.appendChild(glow);
+    towerElement.appendChild(gunContainer);
+
+    tower.gunElement = gun;
+    tower.spinnerElement = spinner;
+
+  } else if (type === "aoe") {
+    towerElement.style.backgroundColor = "orange";
+    towerElement.title = 'Torre de Área';
+  } else if (type === "freeze") {
+    towerElement.style.backgroundColor = '#00ccff';
+    towerElement.title = 'Torre de Resfriamento';
+  } else if (type === "buff") {
+    towerElement.style.backgroundColor = '#33cc33';
+    towerElement.title = 'Torre de Capacitação';
+  } else if (type === "sniper") {
+    towerElement.style.backgroundColor = '#8A2BE2';
+    towerElement.title = 'Torre de Precisão';
+  }
+  
+  gameArea.appendChild(towerElement);
+  
+  const levelText = document.createElement('div');
+  levelText.className = 'tower-level';
+  levelText.textContent = '1';
+  levelText.style.position = 'absolute';
+  levelText.style.top = '50%';
+  levelText.style.left = '50%';
+  levelText.style.transform = 'translate(-50%, -50%)';
+  levelText.style.color = 'black';
+  levelText.style.fontWeight = 'bold';
+  levelText.style.fontSize = '10px';
+  levelText.style.pointerEvents = 'none';
+  towerElement.appendChild(levelText);
+  tower.levelText = levelText;
+  
+  const rangeCircle = document.createElement('div');
+  rangeCircle.className = 'tower-range';
+  rangeCircle.style.position = 'absolute';
+  rangeCircle.style.top = '50%';
+  rangeCircle.style.left = '50%';
+  rangeCircle.style.transform = 'translate(-50%, -50%)';
+  rangeCircle.style.width = getTowerRange(tower) * 2 + 'px';
+  rangeCircle.style.height = getTowerRange(tower) * 2 + 'px';
+  
+  switch(type) {
+    case 'fast': rangeCircle.style.border = '1px solid yellow'; break;
+    case 'aoe': rangeCircle.style.border = '1px solid orange'; break;
+    case 'freeze': rangeCircle.style.border = '1px solid #00ccff'; break;
+    case 'buff': 
+      rangeCircle.style.border = '1px solid #33cc33';
+      rangeCircle.style.background = 'rgba(51, 204, 51, 0.1)';
+      break;
+    case 'sniper': rangeCircle.style.border = '1px solid #8A2BE2'; break;
+  }
+  
+  rangeCircle.style.borderRadius = '50%';
+  rangeCircle.style.opacity = '0.2';
+  rangeCircle.style.pointerEvents = 'none';
+  towerElement.appendChild(rangeCircle);
+  tower.rangeCircle = rangeCircle;
+  
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tower-tooltip';
+  towerElement.appendChild(tooltip);
+  tower.tooltip = tooltip;
+  
+  towerElement.style.cursor = 'pointer';
+  towerElement.onclick = (e) => {
+    e.stopPropagation();
+    upgradeTowerAtSpot(tower);
+  };
+  towerElement.onmouseenter = () => {
+    updateTowerTooltip(tower);
+  };
+  
+  builtTowers.push(tower);
+  drawPaths();
+  return true;
+} 

@@ -497,4 +497,94 @@ body {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
   }
+}
+
+/* Estilos para a Torre Rápida (Minigun) */
+.tower.fast-tower {
+  background: transparent;
+  border-radius: 0;
+  width: 30px;
+  height: 30px;
+  overflow: visible; /* Permite que a arma saia dos limites */
+}
+
+.tower-base {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 12px;
+  background-color: #505A5A;
+  border-radius: 4px 4px 0 0;
+  border: 2px solid #34495E;
+  z-index: 1;
+}
+
+.gun-glow {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: radial-gradient(circle, #ff8c00, #d35400 70%);
+  border-radius: 50%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -60%); /* Levemente para cima */
+  z-index: 2;
+  box-shadow: 0 0 8px #ff8c00;
+}
+
+.gun-container {
+  position: absolute;
+  width: 10px;
+  height: 22px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -85%); /* Ajuste fino para centralizar e posicionar sobre a base */
+  z-index: 3;
+}
+
+.tower-gun {
+  width: 100%;
+  height: 100%;
+  transform-origin: center 80%; /* Rotaciona perto da base da arma */
+  transition: transform 0.1s linear; /* Suaviza a rotação */
+}
+
+.gun-barrel {
+  position: absolute;
+  width: 100%;
+  height: 18px; /* Altura da parte azul */
+  background-color: #3498db;
+  border: 1px solid #2980b9;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.barrel-tip {
+  position: absolute;
+  width: 8px;
+  height: 4px;
+  background-color: #f1c40f;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 1px;
+}
+
+.barrel-spinner {
+  width: 6px;
+  height: 10px;
+  background: linear-gradient(0deg, #fff 25%, #222 25%, #222 50%, #fff 50%, #fff 75%, #222 75%);
+  background-size: 4px 4px;
+}
+
+.barrel-spinner.is-shooting {
+  animation: spin-stripes 0.1s linear infinite;
+}
+
+@keyframes spin-stripes {
+  to { background-position: 0px -4px; }
 } 
