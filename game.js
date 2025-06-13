@@ -1,8 +1,6 @@
 const gameArea = document.getElementById("game");
 const goldDisplay = document.getElementById("gold");
 const waveDisplay = document.getElementById("wave");
-const damageDisplay = document.getElementById("damage");
-const castleHpText = document.getElementById("castleHpText");
 const castleHpBarInner = document.querySelector("#castleHpBar > div");
 const raidLevelDisplay = document.getElementById("raidLevel");
 const nextRaidBtn = document.getElementById("nextRaidBtn");
@@ -20,12 +18,11 @@ let pausedByHelp = false; // flag para controlar a pausa do modal de ajuda
 
 goldDisplay.textContent = gold;
 waveDisplay.textContent = wave;
-damageDisplay.textContent = towerDamage;
 raidLevelDisplay.textContent = raidLevel;
 diamondsDisplay.textContent = diamonds;
 
 // RAID CONFIG
-const RAID_DURATION = 300; // 5 minutos em segundos
+const RAID_DURATION = 360; // 6 minutos em segundos
 let raidTime = 0;
 let raidInterval = null;
 let activeRifts = 1; // Começa com 1 fenda
@@ -35,24 +32,43 @@ let raidEnded = false;
 // --- Configuração dos Caminhos ---
 const NUM_SECTORS = 8; // Dividir o mapa em 8 setores para os caminhos
 let occupiedSectors = [];
+const CASTLE_EXCLUSION_HALF_SIZE = 45; // Metade do tamanho do #castle (90px)
 
 // Castelo
 let castleMaxHp = 100;
 let castleHp = castleMaxHp;
 
 function updateCastleHp() {
-  castleHpText.textContent = castleHp;
   const perc = Math.max(0, (castleHp / castleMaxHp) * 100);
   castleHpBarInner.style.width = perc + "%";
+
+  // Altera a cor da barra de vida
+  if (perc > 50) {
+    castleHpBarInner.style.backgroundColor = 'lime';
+  } else if (perc > 25) {
+    castleHpBarInner.style.backgroundColor = 'yellow';
+  } else {
+    castleHpBarInner.style.backgroundColor = 'red';
+  }
+
   if (castleHp <= 0 && !raidEnded) {
     raidEnded = true;
-    showNextRaidBtn();
-    // Resetar ouro para 300
-    gold = 300;
-    localStorage.setItem("gold", gold);
-    goldDisplay.textContent = gold;
-    alert("Game Over! O castelo foi destruído!");
-    location.reload();
+    
+    // Cria um overlay de game over para não bloquear a renderização
+    const gameOverOverlay = document.createElement('div');
+    gameOverOverlay.id = 'gameOverOverlay';
+    gameOverOverlay.innerHTML = `
+        <h1>Fim de Jogo</h1>
+        <p>A base foi destruída!</p>
+        <p>Reiniciando em 3 segundos...</p>
+    `;
+    gameArea.appendChild(gameOverOverlay);
+
+    // Pausa o jogo e recarrega após um delay
+    pauseGame();
+    setTimeout(() => {
+        location.reload();
+    }, 3000);
   }
 }
 updateCastleHp();
@@ -105,7 +121,7 @@ function getStartPointForAngle(angle) {
     return { x, y };
 }
 
-function generateCleanPath(start, end, segments = 7) {
+function generateCleanPath(start, end, segments = 7, mergesWithCenter = true) {
     const waypoints = [start];
     const totalVec = { x: end.x - start.x, y: end.y - start.y };
     const totalDist = Math.hypot(totalVec.x, totalVec.y);
@@ -134,19 +150,44 @@ function generateCleanPath(start, end, segments = 7) {
         });
     }
 
-    const last = waypoints[waypoints.length - 1];
-    const dx = end.x - last.x;
-    const dy = end.y - last.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const castleRadius = 30;
-    const finalX = end.x - (dx/dist) * castleRadius;
-    const finalY = end.y - (dy/dist) * castleRadius;
-    waypoints.push({x: finalX, y: finalY});
+    if (mergesWithCenter) {
+        // For the main trunk, find intersection with the square exclusion zone
+        const lastPoint = waypoints[waypoints.length - 1];
+        const dx = centerX - lastPoint.x;
+        const dy = centerY - lastPoint.y;
+        const angle = Math.atan2(dy, dx);
+
+        // Account for line thickness (18/2=9) by adding it to the distance
+        const halfSize = CASTLE_EXCLUSION_HALF_SIZE;
+        
+        // Calculate the exact distance from the center to the square's edge at this angle
+        const distanceToEdge = halfSize / Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle)));
+        const finalDistance = distanceToEdge + (ctx.lineWidth / 2);
+
+        // Get the unit vector from the last point towards the center
+        const totalDist = Math.hypot(dx, dy);
+        const unitDx = dx / totalDist;
+        const unitDy = dy / totalDist;
+        
+        // Calculate the final point by moving from the center back along the line
+        const finalX = centerX - unitDx * finalDistance;
+        const finalY = centerY - unitDy * finalDistance;
+
+        waypoints.push({x: finalX, y: finalY});
+    } else {
+        // For branches, the final waypoint is the merge point itself
+        waypoints.push(end);
+    }
 
     return waypoints;
 }
 
 function isPositionValid(x, y, allSpotArrays, minDistance) {
+    // Check against central square exclusion zone
+    if (Math.abs(x - centerX) < CASTLE_EXCLUSION_HALF_SIZE && Math.abs(y - centerY) < CASTLE_EXCLUSION_HALF_SIZE) {
+        return false;
+    }
+    
     const minDistSq = minDistance * minDistance;
     for (const spotArray of allSpotArrays) {
         for (const spot of spotArray) {
@@ -211,7 +252,8 @@ function drawPaths() {
   ctx.clearRect(0, 0, pathsCanvas.width, pathsCanvas.height);
   ctx.lineWidth = 18;
   ctx.strokeStyle = "#8B5A2B";
-  ctx.lineCap = "round";
+  ctx.lineCap = "butt";   // Final da linha reto
+  ctx.lineJoin = "round"; // Curvas arredondadas
 
   // Remover portais antigos
   portals.forEach(p => p.remove());
@@ -263,7 +305,7 @@ function createNewPath() {
 
     // If it's the first path, create the main TRUNK.
     if (allPaths.length === 0) {
-        const path = generateCleanPath(start, center);
+        const path = generateCleanPath(start, center, 7, true);
         allPaths.push(path);
         allBuildSpots.push(generateBuildSpotsForPath(path, []));
     } 
@@ -275,7 +317,7 @@ function createNewPath() {
         const mergePoint = trunkPath[mergeIndex];
 
         // Generate the branch path from the new start to the merge point
-        const branchWaypoints = generateCleanPath(start, mergePoint);
+        const branchWaypoints = generateCleanPath(start, mergePoint, 7, false);
         
         // The final path for enemies is the branch + the rest of the trunk
         const trunkSegment = trunkPath.slice(mergeIndex);
@@ -591,7 +633,7 @@ function getTowerRange(tower) {
     case 'aoe': baseRange = 100; break;
     case 'freeze': baseRange = 90; break;
     case 'buff': baseRange = 80; break; // Alcance menor
-    case 'sniper': baseRange = 180; break; // Alcance muito alto
+    case 'sniper': baseRange = 220; break; // Alcance muito alto
     default: baseRange = 100;
   }
   return baseRange * (1 + (tower.level - 1) * 0.1); // +10% por nível
@@ -730,9 +772,9 @@ function shootFreezeProjectile(tower, target, damage, slowFactor) {
         target.slowed = true;
       }
       
-      // Quanto maior o nível, maior a lentidão
-      const slowAmount = slowFactor * (1 + (tower.level - 1) * 0.2);
-      target.speed = target.originalSpeed * (1 - slowAmount);
+      // Garante que o fator de lentidão não passe de 90% para evitar velocidade negativa
+      const effectiveSlow = Math.min(0.9, slowFactor);
+      target.speed = target.originalSpeed * (1 - effectiveSlow);
       
       // Efeito visual de congelamento
       target.element.style.boxShadow = `0 0 10px #00ccff`;
@@ -999,12 +1041,12 @@ function startRaid() {
     let min = Math.floor(raidTime / 60);
     let sec = raidTime % 60;
     waveDisplay.textContent = `${min}:${sec.toString().padStart(2, '0')}`;
-    // A cada minuto, cria novo caminho ou ramificação
-    if (raidTime > 0 && raidTime % 60 === 0) {
+    // A cada minuto, cria novo caminho, até o minuto 4
+    if (raidTime > 0 && raidTime % 60 === 0 && raidTime <= 240) {
       createNewPath();
     }
-    // Garantir boss aos 4 minutos
-    if (raidTime === 240 && !bossSpawned) {
+    // Garantir boss aos 5 minutos
+    if (raidTime === 300 && !bossSpawned) {
       bossSpawned = true;
       setTimeout(() => spawnEnemy("boss"), 100); // delay para garantir visualização
     }
@@ -1059,7 +1101,6 @@ function nextRaid() {
   // Resetar dano das torres
   towerDamage = 10;
   localStorage.setItem("towerDamage", towerDamage);
-  damageDisplay.textContent = towerDamage;
   // Aumentar dificuldade: boss mais forte, inimigos mais fortes, etc (opcional)
   resetRaid();
   startRaid();

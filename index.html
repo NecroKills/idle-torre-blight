@@ -14,15 +14,20 @@
   <div>Ouro: <span id="gold">0</span></div>
   <div>Diamantes: <span id="diamonds">0</span></div>
   <div>Onda: <span id="wave">0</span></div>
-  <div>Dano da Torre: <span id="damage">10</span></div>
-  <div>Vida do Castelo: <span id="castleHpText">100</span></div>
   <div>Nível da Raid: <span id="raidLevel">1</span></div>
   <button id="nextRaidBtn" style="display:none;margin-left:10px;" onclick="nextRaid()">Próxima Raid</button>
 
   <div id="game" style="position:relative;">
     <canvas id="pathsCanvas" width="1200" height="600" style="position:absolute;left:0;top:0;z-index:0;"></canvas>
     <div id="castle">
+      <div class="oil-pool"></div>
       <div id="castleHpBar"><div></div></div>
+      <div class="pumpjack-frame"></div>
+      <div class="pumpjack-beam-container">
+          <div class="pumpjack-beam">
+              <div class="pumpjack-head"></div>
+          </div>
+      </div>
     </div>
     <div id="radialMenu" style="display:none; position:absolute;"></div>
   </div>
@@ -117,11 +122,11 @@
           <tr><td>4</td><td>0</td><td>-</td><td>104</td><td>Buff: +50% dano/+25% vel.</td></tr>
           <tr><td>5</td><td>0</td><td>-</td><td>112</td><td>Buff: +60% dano/+30% vel.</td></tr>
           <!-- Torre de Precisão -->
-          <tr><td rowspan="5">🎯<br>Torre de Precisão</td><td>1</td><td>50</td><td>Muito Lenta</td><td>180</td><td>Prioriza o mais forte</td></tr>
-          <tr><td>2</td><td>75</td><td>+10%</td><td>198</td><td>Prioriza o mais forte</td></tr>
-          <tr><td>3</td><td>100</td><td>+20%</td><td>216</td><td>Prioriza o mais forte</td></tr>
-          <tr><td>4</td><td>125</td><td>+30%</td><td>234</td><td>Prioriza o mais forte</td></tr>
-          <tr><td>5</td><td>150</td><td>+40%</td><td>252</td><td>Prioriza o mais forte</td></tr>
+          <tr><td rowspan="5">🎯<br>Torre de Precisão</td><td>1</td><td>50</td><td>Muito Lenta</td><td>220</td><td>Prioriza o mais forte</td></tr>
+          <tr><td>2</td><td>75</td><td>+10%</td><td>242</td><td>Prioriza o mais forte</td></tr>
+          <tr><td>3</td><td>100</td><td>+20%</td><td>264</td><td>Prioriza o mais forte</td></tr>
+          <tr><td>4</td><td>125</td><td>+30%</td><td>286</td><td>Prioriza o mais forte</td></tr>
+          <tr><td>5</td><td>150</td><td>+40%</td><td>308</td><td>Prioriza o mais forte</td></tr>
         </table>
       </div>
     </div>
