@@ -19,6 +19,20 @@ const diamondsDisplay = document.getElementById("diamonds");
 const pauseBtn = document.getElementById("pauseBtn");
 const helpBtn = document.getElementById("helpBtn");
 
+// --- Controle de Câmera (Zoom e Pan) ---
+let scale = 1.0;
+let offsetX = 0.0;
+let offsetY = 0.0;
+let isDragging = false;
+let lastMousePosition = { x: 0, y: 0 };
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 2.5;
+
+function updateGameTransform() {
+    gameArea.style.transformOrigin = '0 0';
+    gameArea.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+}
+
 // Estado inicial
 let gold = 300; // Ouro inicial sempre 300
 let wave = 0; // Não usaremos mais o sistema de ondas
@@ -1159,6 +1173,16 @@ function togglePause() {
     }
 }
 
+// --- Funções de Câmera e Coordenadas ---
+function screenToWorld(clientX, clientY) {
+    const rect = gameArea.getBoundingClientRect();
+    const relativeX = clientX - rect.left;
+    const relativeY = clientY - rect.top;
+    const worldX = relativeX / scale;
+    const worldY = relativeY / scale;
+    return { x: worldX, y: worldY };
+}
+
 // Iniciar o jogo quando a página carregar
 window.onload = function() {
   hideNextRaidBtn();
@@ -1168,10 +1192,12 @@ window.onload = function() {
   // Adicionar listener de clique no canvas
   pathsCanvas.addEventListener('click', function(e) {
     if (radialMenuActive) return;
-    const rect = pathsCanvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    console.log('Canvas click:', mx, my);
+    // Converte as coordenadas do clique para as coordenadas do mundo do jogo
+    const worldCoords = screenToWorld(e.clientX, e.clientY);
+    const mx = worldCoords.x;
+    const my = worldCoords.y;
+
+    console.log('Canvas click (world):', mx, my);
     for (let p = 0; p < allBuildSpots.length; p++) {
       for (let s = 0; s < allBuildSpots[p].length; s++) {
         const spot = allBuildSpots[p][s];
@@ -1188,6 +1214,53 @@ window.onload = function() {
   pauseBtn.addEventListener('click', togglePause);
   helpBtn.addEventListener('click', showHelp);
   nextRaidBtn.addEventListener('click', nextRaid);
+
+    // --- EVENT LISTENERS PARA ZOOM E PAN ---
+    gameArea.addEventListener('wheel', (event) => {
+        event.preventDefault();
+
+        const rect = gameArea.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        const worldXBeforeZoom = mouseX / scale;
+        const worldYBeforeZoom = mouseY / scale;
+
+        const scaleAmount = -event.deltaY * 0.001;
+        scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * (1 + scaleAmount)));
+
+        offsetX += (mouseX - scale * worldXBeforeZoom);
+        offsetY += (mouseY - scale * worldYBeforeZoom);
+        
+        updateGameTransform();
+    }, { passive: false });
+
+    gameArea.addEventListener('mousedown', (event) => {
+        if (event.button === 1 || event.button === 2 || (event.button === 0 && event.ctrlKey)) {
+            isDragging = true;
+            lastMousePosition = { x: event.clientX, y: event.clientY };
+            gameArea.style.cursor = 'grabbing';
+        }
+    });
+
+    window.addEventListener('mousemove', (event) => {
+        if (isDragging) {
+            const dx = event.clientX - lastMousePosition.x;
+            const dy = event.clientY - lastMousePosition.y;
+            offsetX += dx;
+            offsetY += dy;
+            lastMousePosition = { x: event.clientX, y: event.clientY };
+            updateGameTransform();
+        }
+    });
+
+    const stopDragging = () => {
+        isDragging = false;
+        gameArea.style.cursor = 'default';
+    };
+
+    window.addEventListener('mouseup', stopDragging);
+    window.addEventListener('mouseleave', stopDragging);
 };
 
 // --- Radial Menu ---
