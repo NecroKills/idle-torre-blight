@@ -875,7 +875,26 @@ function towersAttackLoop() {
       
       // Disparar o projétil correto
       if (tower.type === 'freeze') {
-          shootFreezeProjectile(tower, target, damage, 0.5);
+          // Apontar o canhão e cristal para o alvo
+          const target = findTarget(tower);
+          if (tower.gunElement && target) {
+            const angleDeg = Math.atan2(target.y - tower.y, target.x - tower.x) * 180 / Math.PI;
+            tower.gunElement.style.transform = `rotate(${angleDeg + 90}deg)`;
+          }
+          // Atirar se houver alvo e cooldown
+          if (target && tower.cooldown <= 0) {
+            const damage = getTowerDamage(tower);
+            shootFreezeProjectile(tower, target, damage, 0.5);
+            tower.cooldown = getTowerCooldown(tower);
+            // Animação de vapor congelante
+            if (tower.crystalElement) {
+              const vapor = document.createElement('div');
+              vapor.className = 'freeze-vapor';
+              tower.crystalElement.appendChild(vapor);
+              setTimeout(() => vapor.remove(), 450);
+            }
+          }
+          continue;
       } else {
           const color = tower.type === 'sniper' ? '#8A2BE2' : 'yellow';
           shootProjectileTower(tower, target, damage, color);
@@ -1032,7 +1051,6 @@ function nextRaid() {
   // Resetar ouro sempre para 300
   gold = 300;
   localStorage.setItem("gold", gold);
-  goldDisplay.textContent = gold;
   // Resetar dano das torres
   towerDamage = 10;
   localStorage.setItem("towerDamage", towerDamage);
@@ -1325,8 +1343,27 @@ function buildTowerAtSpot(type, clickedButton) {
     tower.rocketBox = rocketBox;
     tower.rocketTubes = rocketBox.children;
   } else if (type === "freeze") {
-    towerElement.style.backgroundColor = '#00ccff';
-    towerElement.title = 'Torre de Resfriamento';
+    towerElement.style.backgroundColor = "transparent";
+    towerElement.classList.add('freeze-tower');
+    towerElement.title = 'Torre de Gelo';
+
+    const base = document.createElement('div');
+    base.className = 'tower-base freeze-base';
+    const gunContainer = document.createElement('div');
+    gunContainer.className = 'freeze-gun-container';
+    const gun = document.createElement('div');
+    gun.className = 'freeze-gun';
+    const barrel = document.createElement('div');
+    barrel.className = 'freeze-barrel';
+    const crystal = document.createElement('div');
+    crystal.className = 'freeze-crystal-tip';
+    gun.appendChild(barrel);
+    gun.appendChild(crystal);
+    gunContainer.appendChild(gun);
+    towerElement.appendChild(base);
+    towerElement.appendChild(gunContainer);
+    tower.gunElement = gun;
+    tower.crystalElement = crystal;
   } else if (type === "buff") {
     towerElement.style.backgroundColor = '#33cc33';
     towerElement.title = 'Torre de Capacitação';
