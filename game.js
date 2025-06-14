@@ -1578,16 +1578,18 @@ window.addEventListener('click', function(e) {
   }
 });
 
-// Função utilitária para atualizar todos os buffs visuais
+// Função utilitária para atualizar todos os buffs visuais e aplicar o maior buffFactor
 function updateAllBuffEffects() {
-  // 1. Marcar todas as torres como não buffadas
+  // 1. Marcar todas as torres como não buffadas e buffFactor 0
   for (const tower of builtTowers) {
     tower._buffedBy = 0;
+    tower.buffFactor = 0;
   }
-  // 2. Para cada torre amplificadora, marcar as torres dentro do alcance
+  // 2. Para cada torre amplificadora, marcar as torres dentro do alcance e calcular o maior buffFactor
   for (const buffTower of builtTowers) {
     if (buffTower.type !== 'buff') continue;
     const buffRange = getTowerRange(buffTower);
+    const buffFactor = 0.2 + (buffTower.level - 1) * 0.1;
     for (const tower of builtTowers) {
       if (tower === buffTower || tower.type === 'buff') continue;
       const dx = buffTower.x - tower.x;
@@ -1595,6 +1597,9 @@ function updateAllBuffEffects() {
       const dist = Math.sqrt(dx*dx + dy*dy);
       if (dist < buffRange) {
         tower._buffedBy = (tower._buffedBy || 0) + 1;
+        if (!tower.buffFactor || buffFactor > tower.buffFactor) {
+          tower.buffFactor = buffFactor;
+        }
       }
     }
   }
@@ -1617,6 +1622,7 @@ function updateAllBuffEffects() {
         tower.buffEffect.remove();
         tower.buffEffect = null;
       }
+      tower.buffFactor = 0;
     }
   }
 } 
