@@ -877,6 +877,14 @@ function towersAttackLoop() {
 
       // Resetar cooldown
       tower.cooldown = getTowerCooldown(tower);
+
+      // --- Animação de recuo ao atirar (rifle/sniper) ---
+      if (tower.type === 'sniper' && tower.barrelElement) {
+        tower.barrelElement.classList.add('sniper-recoil');
+        setTimeout(() => {
+          if (tower.barrelElement) tower.barrelElement.classList.remove('sniper-recoil');
+        }, 180);
+      }
     }
   }
 }
@@ -1300,8 +1308,34 @@ function buildTowerAtSpot(type, clickedButton) {
     towerElement.style.backgroundColor = '#33cc33';
     towerElement.title = 'Torre de Capacitação';
   } else if (type === "sniper") {
-    towerElement.style.backgroundColor = '#8A2BE2';
+    towerElement.style.backgroundColor = "transparent";
+    towerElement.classList.add('sniper-tower');
     towerElement.title = 'Torre de Precisão';
+
+    const base = document.createElement('div');
+    base.className = 'tower-base';
+    const glow = document.createElement('div');
+    glow.className = 'gun-glow';
+    const gunContainer = document.createElement('div');
+    gunContainer.className = 'gun-container sniper-gun-container';
+    const gun = document.createElement('div');
+    gun.className = 'tower-gun sniper-gun';
+    const barrel = document.createElement('div');
+    barrel.className = 'gun-barrel sniper-barrel';
+    const tip = document.createElement('div');
+    tip.className = 'barrel-tip sniper-tip';
+    // Mira telescópica
+    const scope = document.createElement('div');
+    scope.className = 'sniper-scope';
+    barrel.appendChild(scope);
+    barrel.appendChild(tip);
+    gun.appendChild(barrel);
+    gunContainer.appendChild(gun);
+    towerElement.appendChild(base);
+    towerElement.appendChild(glow);
+    towerElement.appendChild(gunContainer);
+    tower.gunElement = gun;
+    tower.barrelElement = barrel;
   }
   
   gameArea.appendChild(towerElement);

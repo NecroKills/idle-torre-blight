@@ -654,4 +654,78 @@ body {
 .tower-details-table td[rowspan] {
   font-weight: bold;
   font-size: 16px;
+}
+
+/* Torre de Precisão (Sniper) */
+.tower.sniper-tower {
+  background: transparent;
+  border-radius: 0;
+  width: 32px;
+  height: 32px;
+  overflow: visible;
+}
+
+.sniper-gun-container {
+  width: 8px;
+  height: 32px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -90%);
+  z-index: 3;
+}
+
+.sniper-gun {
+  width: 100%;
+  height: 100%;
+  transform-origin: center 85%; /* Rotaciona perto da base do rifle */
+  transition: transform 0.12s cubic-bezier(.4,2,.6,1); /* Suaviza o recuo */
+}
+
+.sniper-barrel {
+  position: absolute;
+  width: 100%;
+  height: 28px;
+  background: linear-gradient(180deg, #222 60%, #444 100%);
+  border: 2px solid #111;
+  border-radius: 2px;
+  left: 0;
+  top: 0;
+  box-shadow: 0 0 4px #111 inset;
+}
+
+.sniper-tip {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: #f1c40f;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 1px solid #bfa500;
+}
+
+/* Mira telescópica */
+.sniper-scope {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle, #888 60%, #222 100%);
+  border: 2px solid #222;
+  border-radius: 50%;
+  left: 50%;
+  top: 7px;
+  transform: translateX(-50%);
+  z-index: 4;
+  box-shadow: 0 0 4px #000a;
+}
+
+@keyframes sniper-recoil {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(8px); }
+  100% { transform: translateY(0); }
+}
+
+.sniper-barrel.sniper-recoil {
+  animation: sniper-recoil 0.18s cubic-bezier(.4,2,.6,1);
 } 
