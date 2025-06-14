@@ -823,6 +823,12 @@ function towersAttackLoop() {
     
     // Lógica de ataque para a torre de Área (AOE)
     if (tower.type === 'aoe') {
+      // Apontar rocket-box para o alvo mais próximo
+      const target = findTarget(tower);
+      if (tower.rocketBox && target) {
+        const angleDeg = Math.atan2(target.y - tower.y, target.x - tower.x) * 180 / Math.PI;
+        tower.rocketBox.style.transform = `translate(-50%, 0) rotate(${angleDeg + 90}deg)`;
+      }
       if (tower.cooldown <= 0) {
         let fired = false;
         const towerRange = getTowerRange(tower);
@@ -1299,8 +1305,25 @@ function buildTowerAtSpot(type, clickedButton) {
     tower.spinnerElement = spinner;
 
   } else if (type === "aoe") {
-    towerElement.style.backgroundColor = "orange";
-    towerElement.title = 'Torre de Área';
+    towerElement.style.backgroundColor = "transparent";
+    towerElement.classList.add('aoe-tower');
+    towerElement.title = 'Torre de Foguetes';
+
+    const base = document.createElement('div');
+    base.className = 'tower-base aoe-base';
+    // Caixa dos lançadores
+    const rocketBox = document.createElement('div');
+    rocketBox.className = 'rocket-box';
+    // Criar 9 canos (3x3)
+    for (let i = 0; i < 9; i++) {
+      const tube = document.createElement('div');
+      tube.className = 'rocket-tube';
+      rocketBox.appendChild(tube);
+    }
+    towerElement.appendChild(base);
+    towerElement.appendChild(rocketBox);
+    tower.rocketBox = rocketBox;
+    tower.rocketTubes = rocketBox.children;
   } else if (type === "freeze") {
     towerElement.style.backgroundColor = '#00ccff';
     towerElement.title = 'Torre de Resfriamento';

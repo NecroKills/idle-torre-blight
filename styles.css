@@ -728,4 +728,53 @@ body {
 
 .sniper-barrel.sniper-recoil {
   animation: sniper-recoil 0.18s cubic-bezier(.4,2,.6,1);
+}
+
+/* Torre de Foguetes (MLRS - Área) */
+.tower.aoe-tower {
+  background: transparent;
+  border-radius: 0;
+  width: 34px;
+  height: 34px;
+  overflow: visible;
+}
+.aoe-base {
+  background: #3a4a2b;
+  border: 2px solid #222;
+  width: 30px;
+  height: 14px;
+  border-radius: 5px 5px 0 0;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+.rocket-box {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 50%;
+  top: 16%;
+  transform: translate(-50%, 0);
+  background: #384c2e;
+  border: 2px solid #222;
+  border-radius: 3px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 2px;
+  z-index: 2;
+  box-shadow: 0 2px 6px #000a;
+}
+.rocket-tube {
+  width: 5px;
+  height: 7px;
+  background: radial-gradient(circle at 60% 40%, #222 60%, #6a7a5a 100%);
+  border: 1px solid #111;
+  border-radius: 2px;
+  box-shadow: 0 0 2px #000a;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 } 
