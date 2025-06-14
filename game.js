@@ -1349,6 +1349,12 @@ function buildTowerAtSpot(type, clickedButton) {
 
     const base = document.createElement('div');
     base.className = 'tower-base freeze-base';
+    // Reservatórios laterais
+    const tankLeft = document.createElement('div');
+    tankLeft.className = 'freeze-tank freeze-tank-left';
+    const tankRight = document.createElement('div');
+    tankRight.className = 'freeze-tank freeze-tank-right';
+    // Canhão central
     const gunContainer = document.createElement('div');
     gunContainer.className = 'freeze-gun-container';
     const gun = document.createElement('div');
@@ -1360,7 +1366,10 @@ function buildTowerAtSpot(type, clickedButton) {
     gun.appendChild(barrel);
     gun.appendChild(crystal);
     gunContainer.appendChild(gun);
+    // Montagem
     towerElement.appendChild(base);
+    towerElement.appendChild(tankLeft);
+    towerElement.appendChild(tankRight);
     towerElement.appendChild(gunContainer);
     tower.gunElement = gun;
     tower.crystalElement = crystal;

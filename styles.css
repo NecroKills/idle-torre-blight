@@ -794,10 +794,10 @@ body {
 }
 .freeze-gun-container {
   position: absolute;
-  width: 10px;
-  height: 22px;
+  width: 14px;
+  height: 28px;
   left: 50%;
-  top: 38%; /* estava 50%, agora mais para cima */
+  top: 24%; /* mais para cima, centralizado */
   transform: translate(-50%, 0);
   z-index: 3;
   filter: drop-shadow(0 0 4px #4fc3f7) drop-shadow(0 0 2px #fff8);
@@ -874,4 +874,23 @@ body {
   0% { opacity: 0.9; transform: translate(-50%, -60%) scale(0.7); }
   60% { opacity: 0.7; transform: translate(-50%, -90%) scale(1.1); }
   100% { opacity: 0; transform: translate(-50%, -120%) scale(1.3); }
+}
+
+/* Reservatórios laterais da torre de gelo */
+.freeze-tank {
+  position: absolute;
+  width: 10px;
+  height: 18px;
+  background: linear-gradient(180deg, #e0f7fa 60%, #4fc3f7 100%);
+  border: 2px solid #1976d2;
+  border-radius: 3px;
+  box-shadow: 0 0 6px #b3e0fc, 0 0 2px #1976d2;
+  top: 54%; /* um pouco acima da base */
+  z-index: 2;
+}
+.freeze-tank-left {
+  left: 2px;
+}
+.freeze-tank-right {
+  right: 2px;
 } 
