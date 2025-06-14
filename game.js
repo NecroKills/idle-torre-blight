@@ -598,6 +598,12 @@ function upgradeTowerAtSpot(tower) {
   // Torre fica mais forte visualmente
   tower.element.style.border = `${Math.min(3, tower.level - 1)}px solid gold`;
   tower.element.style.boxShadow = `0 0 ${tower.level * 3}px ${tower.type === 'fast' ? 'yellow' : 'orange'}`;
+
+  // Também garantir que updatePulseSize seja chamado após upgrades
+  if (tower.type === 'buff' && tower.updatePulseSize) tower.updatePulseSize();
+
+  // Função utilitária para atualizar todos os buffs visuais
+  updateAllBuffEffects();
 }
 
 function updateTowerTooltip(tower) {
@@ -710,32 +716,10 @@ function applyBuffToNearbyTowers(buffTower) {
     // Se a torre está dentro do alcance do buff
     if (dist < buffRange) {
       // Marcar a torre como com buff ativo
-      tower.buffed = true;
-      tower.buffFactor = buffFactor;
-      
-      // Efeito visual de buff
-      if (!tower.buffEffect) {
-        tower.buffEffect = document.createElement('div');
-        tower.buffEffect.className = 'buff-effect';
-        tower.buffEffect.style.position = 'absolute';
-        tower.buffEffect.style.width = '30px';
-        tower.buffEffect.style.height = '30px';
-        tower.buffEffect.style.borderRadius = '50%';
-        tower.buffEffect.style.border = '2px solid #33cc33';
-        tower.buffEffect.style.boxShadow = '0 0 10px #33cc33';
-        tower.buffEffect.style.top = '50%';
-        tower.buffEffect.style.left = '50%';
-        tower.buffEffect.style.transform = 'translate(-50%, -50%)';
-        tower.buffEffect.style.pointerEvents = 'none';
-        tower.element.appendChild(tower.buffEffect);
-      }
-    } else if (tower.buffed) {
+      tower._buffedBy = (tower._buffedBy || 0) + 1;
+    } else if (tower._buffedBy > 0) {
       // Remover buff se a torre saiu do alcance
-      tower.buffed = false;
-      if (tower.buffEffect) {
-        tower.buffEffect.remove();
-        tower.buffEffect = null;
-      }
+      tower._buffedBy = 0;
     }
   }
 }
@@ -1374,8 +1358,50 @@ function buildTowerAtSpot(type, clickedButton) {
     tower.gunElement = gun;
     tower.crystalElement = crystal;
   } else if (type === "buff") {
-    towerElement.style.backgroundColor = '#33cc33';
-    towerElement.title = 'Torre de Capacitação';
+    towerElement.style.backgroundColor = "transparent";
+    towerElement.classList.add('buff-tower');
+    towerElement.title = 'Torre de Amplificação de Energia';
+
+    const base = document.createElement('div');
+    base.className = 'tower-base buff-base';
+    // Haste central
+    const mast = document.createElement('div');
+    mast.className = 'buff-mast';
+    // Esfera brilhante
+    const orb = document.createElement('div');
+    orb.className = 'buff-orb';
+    // Anel flutuante
+    const ring = document.createElement('div');
+    ring.className = 'buff-ring';
+    // Pulso animado (ajustado pelo alcance)
+    const pulse = document.createElement('div');
+    pulse.className = 'buff-pulse';
+    // Montagem
+    towerElement.appendChild(base);
+    towerElement.appendChild(mast);
+    towerElement.appendChild(orb);
+    towerElement.appendChild(ring);
+    towerElement.appendChild(pulse);
+    tower.mastElement = mast;
+    tower.orbElement = orb;
+    tower.ringElement = ring;
+    tower.pulseElement = pulse;
+    function updatePulseSize() {
+      // Usa o mesmo valor do rangeCircle
+      if (tower.rangeCircle) {
+        pulse.style.width = tower.rangeCircle.style.width;
+        pulse.style.height = tower.rangeCircle.style.height;
+      } else {
+        const range = getTowerRange(tower);
+        pulse.style.width = (range * 2) + 'px';
+        pulse.style.height = (range * 2) + 'px';
+      }
+      pulse.style.left = '50%';
+      pulse.style.top = '50%';
+      pulse.style.transform = 'translate(-50%, -50%)';
+    }
+    updatePulseSize();
+    tower.updatePulseSize = updatePulseSize;
   } else if (type === "sniper") {
     towerElement.style.backgroundColor = "transparent";
     towerElement.classList.add('sniper-tower');
@@ -1470,6 +1496,7 @@ function buildTowerAtSpot(type, clickedButton) {
   });
   
   builtTowers.push(tower);
+  updateAllBuffEffects();
   drawPaths();
   return true;
 }
@@ -1534,6 +1561,7 @@ function sellTower(tower) {
   tower.element.remove();
 
   // Redesenha os caminhos para mostrar o local vazio
+  updateAllBuffEffects();
   drawPaths();
 }
 
@@ -1548,4 +1576,47 @@ window.addEventListener('click', function(e) {
       hideSellMenu();
     }
   }
-}); 
+});
+
+// Função utilitária para atualizar todos os buffs visuais
+function updateAllBuffEffects() {
+  // 1. Marcar todas as torres como não buffadas
+  for (const tower of builtTowers) {
+    tower._buffedBy = 0;
+  }
+  // 2. Para cada torre amplificadora, marcar as torres dentro do alcance
+  for (const buffTower of builtTowers) {
+    if (buffTower.type !== 'buff') continue;
+    const buffRange = getTowerRange(buffTower);
+    for (const tower of builtTowers) {
+      if (tower === buffTower || tower.type === 'buff') continue;
+      const dx = buffTower.x - tower.x;
+      const dy = buffTower.y - tower.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < buffRange) {
+        tower._buffedBy = (tower._buffedBy || 0) + 1;
+      }
+    }
+  }
+  // 3. Aplicar/remover efeito visual conforme necessário
+  for (const tower of builtTowers) {
+    if (tower._buffedBy > 0) {
+      if (!tower.buffEffect) {
+        tower.buffEffect = document.createElement('div');
+        tower.buffEffect.className = 'buff-effect';
+        // Inserir depois da base, se existir
+        const base = tower.element.querySelector('.tower-base');
+        if (base && base.nextSibling) {
+          tower.element.insertBefore(tower.buffEffect, base.nextSibling);
+        } else {
+          tower.element.appendChild(tower.buffEffect);
+        }
+      }
+    } else {
+      if (tower.buffEffect) {
+        tower.buffEffect.remove();
+        tower.buffEffect = null;
+      }
+    }
+  }
+} 
